@@ -17,6 +17,7 @@ def load_image(path):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     return img
 
+
 def _float_feature(value):
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))
 
@@ -91,18 +92,6 @@ def main():
             ef_poses.append(endeffector_pos)
 
         write_tf_records(images, angles, velocities, ef_poses, group_out)
-    # for i in range(100):
-    #     for filename in glob.glob('traj{}/images/*.png'.format(i)):
-    #         images += []
-    #
-    #     with open('joint_traj{}.pkl'.format(i), 'r') as f:
-    #         data = cPickle.load(f)
-    #     angles += data['jointangles']
-    #     velocities += data['jointvelocities']
-    #     states += data['endeffector_pos']
-    #
-    # filepath = ''
-    # write_tf_records(images, angles, velocities, states, filepath)
 
 
 if __name__ == '__main__':
