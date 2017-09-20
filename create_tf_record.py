@@ -14,7 +14,6 @@ flags.DEFINE_string('out_path', './', 'output file directory')
 
 def load_image(path):
     img = cv2.imread(path)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     return img
 
 
@@ -23,7 +22,7 @@ def _float_feature(value):
 
 
 def _bytes_feature(value):
-    return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+    return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
 
 
 def _int64_feature(value):
@@ -43,10 +42,10 @@ def write_tf_records(images, angles, velocities, ef_poses, filepath):
         image_raw = images[traj_iter].astype(np.uint8)
         image_raw = image_raw.tostring()
 
-        feature[str(traj_iter) + '/image'] = _bytes_feature(image_raw)
-        feature[str(traj_iter) + '/angle'] = _float_feature(angles[traj_iter].flatten().tolist())
-        feature[str(traj_iter) + '/velocity'] = _float_feature(velocities[traj_iter].flatten().tolist())
-        feature[str(traj_iter) + '/endeffector_pos'] = _float_feature(ef_poses[traj_iter].flatten().tolist())
+        feature['image'] = _bytes_feature(image_raw)
+        feature['angle'] = _float_feature(angles[traj_iter].flatten().tolist())
+        feature['velocity'] = _float_feature(velocities[traj_iter].flatten().tolist())
+        feature['endeffector_pos'] = _float_feature(ef_poses[traj_iter].flatten().tolist())
 
         example = tf.train.Example(features=tf.train.Features(feature=feature))
         writer.write(example.SerializeToString())
@@ -84,8 +83,7 @@ def main():
             joint_velocities = sawyer_data['jointvelocities']
             endeffector_pos = sawyer_data['endeffector_pos']
 
-            stacked = np.stack(traj_images, axis = 3)
-
+            stacked = np.stack(traj_images, axis = 0)
             images.append(stacked)
             angles.append(joint_angles)
             velocities.append(joint_velocities)

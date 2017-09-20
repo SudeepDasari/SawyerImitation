@@ -3,75 +3,79 @@ import numpy as np
 from tensorflow.python.platform import gfile
 from tensorflow.python.platform import flags
 import os
-
+import cv2
+import matplotlib.pyplot as plt
 FLAGS = flags.FLAGS
-flags.DEFINE_string('data_path', './', 'path to tfrecords directory')
+flags.DEFINE_string('data_path', './', 'path to tfrecords file')
 
 NUM_FRAMES = 60
 NUM_JOINTS = 7
 STATE_DIM = 3
 IMG_WIDTH = 64
 IMG_HEIGHT = 64
-
+COLOR_CHANNELS = 3
 BATCH_SIZE = 32
 
-def read_tf_record(training=True):
-    file_names = gfile.Glob(os.path.join(FLAGS.data_path, '*'))
-    if not file_names:
-        raise RuntimeError('No data_files files found.')
+def read_tf_record():
+    #gets data path
+    data_path = FLAGS.data_path
 
-    filename_queue = tf.train.string_input_producer(file_names, shuffle=True)
-    reader = tf.TFRecordReader()
-    _, serialized_example = reader.read(filename_queue)
+    #setup tf session
+    with tf.Session() as sess:
+        #feature dictionary definition
+        feature = {
+            'image': tf.FixedLenFeature([IMG_WIDTH * IMG_HEIGHT * NUM_FRAMES * 3], tf.string),
+            'angle': tf.FixedLenFeature([NUM_JOINTS * NUM_FRAMES], tf.float32),
+            'velocity': tf.FixedLenFeature([NUM_JOINTS * NUM_FRAMES], tf.float32),
+            'endeffector_pos': tf.FixedLenFeature([STATE_DIM * NUM_FRAMES], tf.float32),
+        }
 
-    image_seq, angles_seq, velocities_seq, endeffector_pos_seq = [], [], [], []
 
-    for traj_iter in range(100):
+        # Create a list of filenames and pass it to a queue
+        filename_queue = tf.train.string_input_producer([data_path], num_epochs=1)
+        # Define a reader and read the next record
+        reader = tf.TFRecordReader()
+        _, serialized_example = reader.read(filename_queue)
+        # Decode the record read by the reader
+        features = tf.parse_single_example(serialized_example, features=feature)
 
-    	image_name = str(traj_iter) + '/image'
-    	angle_name = str(traj_iter) + '/angle'
-    	velocity_name = str(traj_iter) + '/velocity'
-    	endeffector_pos_name = str(traj_iter) + 'endeffector_pos'
 
-    	features = {
-            image_name: tf.FixedLenFeature([IMG_WIDTH * IMG_HEIGHT * NUM_FRAMES], tf.string),
-            angle_name: tf.FixedLenFeature([NUM_JOINTS * NUM_FRAMES], tf.float32),
-            velocity_name: tf.FixedLenFeature([NUM_JOINTS * NUM_FRAMES], tf.float32),
-            endeffector_pos_name: tf.FixedLenFeature([STATE_DIM * NUM_FRAMES], tf.float32),
-    	}
+        # Convert the image and robot data from string back to the numbers
+        image = tf.decode_raw(features['image'], tf.uint8)
+        angles = tf.reshape(features['angle'], shape=[NUM_FRAMES, NUM_JOINTS])
+        velocity = tf.reshape(features['velocity'], shape=[NUM_FRAMES, NUM_JOINTS])
+        endeffector_pos = tf.reshape(features['endeffector_pos'], shape=[NUM_FRAMES, STATE_DIM])
 
-    	features = tf.parse_single_example(serialized_example, features=features)
+        # Reshape image data into original video
+        image = tf.reshape(image, [NUM_FRAMES, IMG_HEIGHT, IMG_WIDTH, COLOR_CHANNELS])
 
-	images = tf.decode_raw(features[image_name], tf.uint8)
-	images = tf.reshape(images, shape=[NUM_FRAMES, IMG_HEIGHT, IMG_WIDTH])
-	image_seq.append(images)
 
-	angles = tf.reshape(features[angle_name], shape=[NUM_FRAMES, NUM_JOINTS])
-	angles_seq.append(angles)
+        # Creates batches by randomly shuffling tensors. each training example is (image,velocity) pair
+        images, velocities = tf.train.shuffle_batch([image, velocity], batch_size=15, capacity=1800, num_threads=1, min_after_dequeue=1200, enqueue_many=True)
 
-	velocities = tf.reshape(features[velocity_name], shape=[NUM_FRAMES, NUM_JOINTS])
-	velocities_seq.append(velocities)
+        # Initialize all global and local variables
+        init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
+        sess.run(init_op)
+        # Create a coordinator and run all QueueRunner objects
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(coord=coord)
 
-	endeffector_poses = tf.reshape(features[endeffector_pos_name], shape=[NUM_FRAMES, STATE_DIM])
-	endeffector_pos_seq.append(endeffector_poses)
+        for batch_index in range(5):
+            img, vel = sess.run([images, velocities])
 
-    image_seq = tf.concat(image_seq, axis=0)
-    angles_seq = tf.concat(angles_seq, axis=0)
-    velocities_seq = tf.concat(velocities_seq, axis=0)
-    endeffector_pos_seq = tf.concat(endeffector_pos_seq, axis=0)
-    print image_seq.shape, angles_seq.shape, velocities_seq.shape, endeffector_pos_seq.shape
+            for i in range(15):
+                cv2.imshow('img', img[i])
+                cv2.waitKey(0)
 
-    num_threads = np.min((BATCH_SIZE, 32))
+        # Stop the threads
+        coord.request_stop()
 
-    image_batch, angles_batch, velocities_batch, endeffector_pos_batch = tf.train.batch(
-	[image_seq, angles_seq, velocities_seq, endeffector_pos_seq],
-	BATCH_SIZE,
-	num_threads=num_threads,
-	capacity=100 * BATCH_SIZE,
-	enqueue_many=True)
-    
-    print image_batch.shape, angles_batch.shape, velocities_batch.shape, endeffector_pos_batch.shape
-    # return image_batch, angles_batch, velocities_batch, endeffector_pos_batch
+        # Wait for threads to stop
+        coord.join(threads)
+    sess.close()
+
+
 
 if __name__ == '__main__':
     read_tf_record()
+
