@@ -37,16 +37,16 @@ def write_tf_records(images, angles, velocities, ef_poses, filepath):
 
     feature = {}
 
-    for frame in range(len(images)):
-        print 'On frame', frame
+    for traj_iter in range(len(images)):
+        print 'On traj', traj_iter
 
-        image_raw = images[frame].astype(np.uint8)
+        image_raw = images[traj_iter].astype(np.uint8)
         image_raw = image_raw.tostring()
 
-        feature['image'] = _bytes_feature(image_raw)
-        feature['angle'] = _float_feature(angles[frame].flatten().tolist())
-        feature['velocity'] = _float_feature(velocities[frame].flatten().tolist())
-        feature['endeffector_pos'] = _float_feature(ef_poses[frame].flatten().tolist())
+        feature[str(traj_iter) + '/image'] = _bytes_feature(image_raw)
+        feature[str(traj_iter) + '/angle'] = _float_feature(angles[traj_iter].flatten().tolist())
+        feature[str(traj_iter) + '/velocity'] = _float_feature(velocities[traj_iter].flatten().tolist())
+        feature[str(traj_iter) + '/endeffector_pos'] = _float_feature(ef_poses[traj_iter].flatten().tolist())
 
         example = tf.train.Example(features=tf.train.Features(feature=feature))
         writer.write(example.SerializeToString())
@@ -90,6 +90,8 @@ def main():
             angles.append(joint_angles)
             velocities.append(joint_velocities)
             ef_poses.append(endeffector_pos)
+
+	print len(images), images[0].shape, len(angles), len(angles[0]), len(angles[0][0])
 
         write_tf_records(images, angles, velocities, ef_poses, group_out)
 
