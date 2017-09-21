@@ -89,8 +89,6 @@ def main():
             velocities.append(joint_velocities)
             ef_poses.append(endeffector_pos)
 
-	print len(images), images[0].shape, len(angles), len(angles[0]), len(angles[0][0])
-
         write_tf_records(images, angles, velocities, ef_poses, group_out)
 
 
