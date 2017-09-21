@@ -24,7 +24,6 @@ class ImitationLearningModel:
         with slim.arg_scope([slim.layers.conv2d, slim.layers.fully_connected, tf_layers.layer_norm]):
 
             layer1 = tf_layers.layer_norm(self.build_vgg(self.images), scope='conv1_norm')
-
             layer2 = tf_layers.layer_norm(
                 slim.layers.conv2d(layer1, 64, [3, 3], stride=2, scope='conv2'), scope='conv2_norm')
 
@@ -56,7 +55,7 @@ class ImitationLearningModel:
 
             fp_flat = tf.reshape(tf.concat([fp_x, fp_y], 1), [-1, num_fp * 2])
 
-            conv_out = tf.concat([fp_flat, tf.reshape(self.robot_configs, [batch_size, 10])], 1) # dim of angles: 7, dim of eepose: 3
+            conv_out = tf.concat([fp_flat, tf.reshape(self.robot_configs, [15, 10])], 1) # dim of angles: 7, dim of eepose: 3
 
             layer4 = slim.layers.fully_connected(conv_out, 100, scope='fc1')
 
@@ -110,16 +109,18 @@ class ImitationLearningModel:
         conv5_3 = self.vgg_conv_layer(conv5_2, "conv5_3")
         conv5_4 = self.vgg_conv_layer(conv5_3, "conv5_4")
         pool5 = self.vgg_max_pool(conv5_4, 'pool5')
+	
+	 return pool5
 
-        fc6 = self.vgg_fc_layer(pool5, "fc6")
-        relu6 = tf.nn.relu(fc6)
+        # fc6 = self.vgg_fc_layer(pool5, "fc6")
+        # relu6 = tf.nn.relu(fc6)
 
-        fc7 = self.vgg_fc_layer(relu6, "fc7")
-        relu7 = tf.nn.relu(fc7)
+        # fc7 = self.vgg_fc_layer(relu6, "fc7")
+        # relu7 = tf.nn.relu(fc7)
 
-        fc8 = self.vgg_fc_layer(relu7, "fc8")
+        # fc8 = self.vgg_fc_layer(relu7, "fc8")
 
-        return fc8
+        # return fc8
 
     def vgg_avg_pool(self, bottom, name):
         return tf.nn.avg_pool(bottom, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name=name)
@@ -169,7 +170,6 @@ if __name__ == '__main__':
 
     from read_tf_record import read_tf_record
     images_batch, angles_batch, velocities_batch, endeffector_poses_batch = read_tf_record('train/')
-
     robot_configs_batch = tf.concat([angles_batch, endeffector_poses_batch], 1)
     actions_batch = velocities_batch
 
@@ -184,3 +184,5 @@ if __name__ == '__main__':
 
     model = ImitationLearningModel(images_batch, robot_configs_batch, actions_batch, vgg19_path)
     model.build()
+
+    print model.predicted_actions

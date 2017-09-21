@@ -6,8 +6,8 @@ flags.DEFINE_string('data_path', './', 'path to tfrecords file')
 NUM_FRAMES = 60
 NUM_JOINTS = 7
 STATE_DIM = 3
-IMG_WIDTH = 64
-IMG_HEIGHT = 64
+IMG_WIDTH = 224
+IMG_HEIGHT = 224
 COLOR_CHANNELS = 3
 
 
