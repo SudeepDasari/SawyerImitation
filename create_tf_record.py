@@ -70,11 +70,12 @@ def main():
             traj_path = group_path + '/' + traj
 
             traj_images = []
-            image_files = glob.glob(traj_path + '/images/*.png')
+            image_files = glob.glob(traj_path + '/images/*.jpgs')
 
             for i in range(len(image_files)):
                 im_path = [x for x in image_files if 'im%d' % (i) in x][0]
-                traj_images.append(load_image(im_path))
+                img = cv2.resize(load_image(im_path), (224, 224), interpolation=cv2.INTER_AREA)
+                traj_images.append(img)
 
             pkl_path = glob.glob(traj_path + '/*.pkl')[0]
 

@@ -21,56 +21,69 @@ class ImitationLearningModel:
         self.predicted_actions = []
 
     def build(self):
-        for image, robot_config, action in zip(self.images, self.robot_configs, self.actions):
-            with slim.arg_scope([slim.layers.conv2d, slim.layers.fully_connected]):
+        with slim.arg_scope([slim.layers.conv2d, slim.layers.fully_connected, tf_layers.layer_norm]):
 
-                layer1 = tf.norm(self.build_vgg(image))
+            layer1 = tf_layers.layer_norm(self.build_vgg(self.images), scope='conv1_norm')
 
-                layer2 = tf.norm(slim.layers.conv2d(layer1, 64, [3, 3], stride=2, scope='conv2'))
+            layer2 = tf_layers.layer_norm(
+                slim.layers.conv2d(layer1, 64, [3, 3], stride=2, scope='conv2'), scope='conv2_norm')
 
-                layer3 = tf.norm(slim.layers.conv2d(layer2, 64, [3, 3], stride=2, scope='conv3'))
+            layer3 = tf_layers.layer_norm(
+                slim.layers.conv2d(layer2, 64, [3, 3], stride=2, scope='conv3'), scope='conv3_norm')
 
-                _, num_rows, num_cols, num_fp = layer3.get_shape()
-                x_map = np.empty([num_rows, num_cols], np.float32)
-                y_map = np.empty([num_rows, num_cols], np.float32)
+            batch_size, num_rows, num_cols, num_fp = layer3.get_shape()
+            num_rows, num_cols, num_fp = [int(x) for x in [num_rows, num_cols, num_fp]]
 
-                features = tf.reshape(tf.transpose(layer3, [0, 3, 1, 2]),
-                                      [-1, num_rows * num_cols])
-                softmax = tf.nn.softmax(features)
+            x_map = np.empty([num_rows, num_cols], np.float32)
+            y_map = np.empty([num_rows, num_cols], np.float32)
 
-                fp_x = tf.reduce_sum(tf.mul(x_map, softmax), [1], keep_dims=True)
-                fp_y = tf.reduce_sum(tf.mul(y_map, softmax), [1], keep_dims=True)
+            for i in range(num_rows):
+                for j in range(num_cols):
+                    x_map[i, j] = (i - num_rows / 2.0) / num_rows
+                    y_map[i, j] = (j - num_cols / 2.0) / num_cols
 
-                fp_flat = tf.reshape(tf.concat(1, [fp_x, fp_y]), [-1, num_fp * 2])
+            x_map = tf.convert_to_tensor(x_map)
+            y_map = tf.convert_to_tensor(y_map)
 
-                conv_out = tf.concat(2, [fp_flat, tf.reshape(robot_config, [-1, 10])]) # dim of angles: 7, dim of eepose: 3
+            x_map = tf.reshape(x_map, [num_rows * num_cols])
+            y_map = tf.reshape(y_map, [num_rows * num_cols])
 
-                layer4 = slim.layers.fully_connected(conv_out, 100, scope='fc1')
+            features = tf.reshape(tf.transpose(layer3, [0, 3, 1, 2]), [-1, num_rows * num_cols])
+            softmax = tf.nn.softmax(features)
 
-                layer5 = slim.layers.fully_connected(layer4, 100, scope='fc2')
+            fp_x = tf.reduce_sum(tf.multiply(x_map, softmax), [1], keep_dims=True)
+            fp_y = tf.reduce_sum(tf.multiply(y_map, softmax), [1], keep_dims=True)
 
-                layer6 = slim.layers.fully_connected(layer5, 100, scope='fc3')
+            fp_flat = tf.reshape(tf.concat([fp_x, fp_y], 1), [-1, num_fp * 2])
 
-                fc_out = slim.layers.fully_connected(layer6, 7, scope='fc4')
+            conv_out = tf.concat([fp_flat, tf.reshape(self.robot_configs, [batch_size, 10])], 1) # dim of angles: 7, dim of eepose: 3
 
-                self.predicted_actions.append(fc_out)
+            layer4 = slim.layers.fully_connected(conv_out, 100, scope='fc1')
 
-    def build_vgg(self, image):
-        rgb_scaled = image * 255.0
+            layer5 = slim.layers.fully_connected(layer4, 100, scope='fc2')
 
-        vgg_mean = [103.939, 116.779, 123.68]
+            layer6 = slim.layers.fully_connected(layer5, 100, scope='fc3')
+
+            fc_out = slim.layers.fully_connected(layer6, 7, scope='fc4')
+
+            self.predicted_actions.append(fc_out)
+
+    # Source: https://github.com/machrisaa/tensorflow-vgg/blob/master/vgg19.py
+    def build_vgg(self, images):
+        rgb_scaled = tf.to_float(images) * 255
+
+        vgg_mean = [tf.constant(103.939, dtype=tf.float32),
+                    tf.constant(116.779, dtype=tf.float32),
+                    tf.constant(123.68, dtype=tf.float32)]
 
         # Convert RGB to BGR
         red, green, blue = tf.split(axis=3, num_or_size_splits=3, value=rgb_scaled)
-        assert red.get_shape().as_list()[1:] == [224, 224, 1]
-        assert green.get_shape().as_list()[1:] == [224, 224, 1]
-        assert blue.get_shape().as_list()[1:] == [224, 224, 1]
+
         bgr = tf.concat(axis=3, values=[
             blue - vgg_mean[0],
             green - vgg_mean[1],
             red - vgg_mean[2],
         ])
-        assert bgr.get_shape().as_list()[1:] == [224, 224, 3]
 
         conv1_1 = self.vgg_conv_layer(bgr, "conv1_1")
         conv1_2 = self.vgg_conv_layer(conv1_1, "conv1_2")
@@ -99,7 +112,6 @@ class ImitationLearningModel:
         pool5 = self.vgg_max_pool(conv5_4, 'pool5')
 
         fc6 = self.vgg_fc_layer(pool5, "fc6")
-        assert fc6.get_shape().as_list()[1:] == [4096]
         relu6 = tf.nn.relu(fc6)
 
         fc7 = self.vgg_fc_layer(relu6, "fc7")
@@ -158,7 +170,17 @@ if __name__ == '__main__':
     from read_tf_record import read_tf_record
     images_batch, angles_batch, velocities_batch, endeffector_poses_batch = read_tf_record('train/')
 
-    robot_configs_batch = tf.concat(1, [angles_batch, endeffector_poses_batch])
+    robot_configs_batch = tf.concat([angles_batch, endeffector_poses_batch], 1)
     actions_batch = velocities_batch
 
+    # images = tf.split(axis=0, num_or_size_splits=images_batch.get_shape()[0], value=images_batch)
+    # images = [tf.squeeze(img) for img in images]
+    #
+    # robot_configs = tf.split(axis=0, num_or_size_splits=robot_configs_batch.get_shape()[0], value=robot_configs_batch)
+    # robot_configs = [tf.squeeze(conf) for conf in robot_configs]
+    #
+    # actions = tf.split(axis=0, num_or_size_splits=actions_batch.get_shape()[0], value=actions_batch)
+    # actions = [tf.squeeze(act) for act in actions]
+
     model = ImitationLearningModel(images_batch, robot_configs_batch, actions_batch, vgg19_path)
+    model.build()

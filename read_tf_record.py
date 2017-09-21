@@ -1,10 +1,5 @@
 import tensorflow as tf
-import numpy as np
-from tensorflow.python.platform import gfile
 from tensorflow.python.platform import flags
-import os
-import cv2
-import matplotlib.pyplot as plt
 FLAGS = flags.FLAGS
 flags.DEFINE_string('data_path', './', 'path to tfrecords file')
 
