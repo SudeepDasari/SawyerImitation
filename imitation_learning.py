@@ -1,15 +1,22 @@
 import tensorflow as tf
 from tensorflow.contrib.layers.python import layers as tf_layers
+from tensorflow.python.platform import flags
 import tensorflow.contrib.slim as slim
 import numpy as np
+import os
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string('vgg19_path', './', 'path to tfrecords file')
 
 
 class ImitationLearningModel:
 
-    def __init__(self, images, robot_configs, actions):
+    def __init__(self, images, robot_configs, actions, vgg19_path):
         self.images = images
         self.robot_configs = robot_configs
         self.actions = actions
+
+        self.data_dict = np.load(os.path.join(vgg19_path, "vgg19.npy"), encoding='latin1').item()
 
         self.predicted_actions = []
 
@@ -65,50 +72,56 @@ class ImitationLearningModel:
         ])
         assert bgr.get_shape().as_list()[1:] == [224, 224, 3]
 
-        conv1_1 = self.conv_layer(bgr, "conv1_1")
-        conv1_2 = self.conv_layer(conv1_1, "conv1_2")
-        pool1 = self.max_pool(conv1_2, 'pool1')
+        conv1_1 = self.vgg_conv_layer(bgr, "conv1_1")
+        conv1_2 = self.vgg_conv_layer(conv1_1, "conv1_2")
+        pool1 = self.vgg_max_pool(conv1_2, 'pool1')
 
-        conv2_1 = self.conv_layer(pool1, "conv2_1")
-        conv2_2 = self.conv_layer(conv2_1, "conv2_2")
-        pool2 = self.max_pool(conv2_2, 'pool2')
+        conv2_1 = self.vgg_conv_layer(pool1, "conv2_1")
+        conv2_2 = self.vgg_conv_layer(conv2_1, "conv2_2")
+        pool2 = self.vgg_max_pool(conv2_2, 'pool2')
 
-        conv3_1 = self.conv_layer(pool2, "conv3_1")
-        conv3_2 = self.conv_layer(conv3_1, "conv3_2")
-        conv3_3 = self.conv_layer(conv3_2, "conv3_3")
-        conv3_4 = self.conv_layer(conv3_3, "conv3_4")
-        pool3 = self.max_pool(conv3_4, 'pool3')
+        conv3_1 = self.vgg_conv_layer(pool2, "conv3_1")
+        conv3_2 = self.vgg_conv_layer(conv3_1, "conv3_2")
+        conv3_3 = self.vgg_conv_layer(conv3_2, "conv3_3")
+        conv3_4 = self.vgg_conv_layer(conv3_3, "conv3_4")
+        pool3 = self.vgg_max_pool(conv3_4, 'pool3')
 
-        conv4_1 = self.conv_layer(pool3, "conv4_1")
-        conv4_2 = self.conv_layer(conv4_1, "conv4_2")
-        conv4_3 = self.conv_layer(conv4_2, "conv4_3")
-        conv4_4 = self.conv_layer(conv4_3, "conv4_4")
-        pool4 = self.max_pool(conv4_4, 'pool4')
+        conv4_1 = self.vgg_conv_layer(pool3, "conv4_1")
+        conv4_2 = self.vgg_conv_layer(conv4_1, "conv4_2")
+        conv4_3 = self.vgg_conv_layer(conv4_2, "conv4_3")
+        conv4_4 = self.vgg_conv_layer(conv4_3, "conv4_4")
+        pool4 = self.vgg_max_pool(conv4_4, 'pool4')
 
-        conv5_1 = self.conv_layer(pool4, "conv5_1")
-        conv5_2 = self.conv_layer(conv5_1, "conv5_2")
-        conv5_3 = self.conv_layer(conv5_2, "conv5_3")
-        conv5_4 = self.conv_layer(conv5_3, "conv5_4")
-        pool5 = self.max_pool(conv5_4, 'pool5')
+        conv5_1 = self.vgg_conv_layer(pool4, "conv5_1")
+        conv5_2 = self.vgg_conv_layer(conv5_1, "conv5_2")
+        conv5_3 = self.vgg_conv_layer(conv5_2, "conv5_3")
+        conv5_4 = self.vgg_conv_layer(conv5_3, "conv5_4")
+        pool5 = self.vgg_max_pool(conv5_4, 'pool5')
 
-        fc6 = self.fc_layer(pool5, "fc6")
+        fc6 = self.vgg_fc_layer(pool5, "fc6")
         assert fc6.get_shape().as_list()[1:] == [4096]
         relu6 = tf.nn.relu(fc6)
 
-        fc7 = self.fc_layer(relu6, "fc7")
+        fc7 = self.vgg_fc_layer(relu6, "fc7")
         relu7 = tf.nn.relu(fc7)
 
-        fc8 = self.fc_layer(relu7, "fc8")
+        fc8 = self.vgg_fc_layer(relu7, "fc8")
 
         return fc8
 
+    def vgg_avg_pool(self, bottom, name):
+        return tf.nn.avg_pool(bottom, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name=name)
+
+    def vgg_max_pool(self, bottom, name):
+        return tf.nn.max_pool(bottom, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name=name)
+
     def vgg_conv_layer(self, bottom, name):
         with tf.variable_scope(name):
-            filt = self.get_conv_filter(name)
+            filt = self.vgg_get_conv_filter(name)
 
             conv = tf.nn.conv2d(bottom, filt, [1, 1, 1, 1], padding='SAME')
 
-            conv_biases = self.get_bias(name)
+            conv_biases = self.vgg_get_bias(name)
             bias = tf.nn.bias_add(conv, conv_biases)
 
             relu = tf.nn.relu(bias)
@@ -122,8 +135,8 @@ class ImitationLearningModel:
                 dim *= d
             x = tf.reshape(bottom, [-1, dim])
 
-            weights = self.get_fc_weight(name)
-            biases = self.get_bias(name)
+            weights = self.vgg_get_fc_weight(name)
+            biases = self.vgg_get_bias(name)
 
             fc = tf.nn.bias_add(tf.matmul(x, weights), biases)
 
@@ -140,10 +153,12 @@ class ImitationLearningModel:
 
 
 if __name__ == '__main__':
+    vgg19_path = FLAGS.vgg19_path
+
     from read_tf_record import read_tf_record
-    images, angles, velocities, endeffector_poses = read_tf_record('./')
+    images_batch, angles_batch, velocities_batch, endeffector_poses_batch = read_tf_record('train/')
 
-    robot_configs = tf.concat(1, [angles, endeffector_poses])
-    actions = velocities
+    robot_configs_batch = tf.concat(1, [angles_batch, endeffector_poses_batch])
+    actions_batch = velocities_batch
 
-    model = ImitationLearningModel(images, robot_configs, actions)
+    model = ImitationLearningModel(images_batch, robot_configs_batch, actions_batch, vgg19_path)
