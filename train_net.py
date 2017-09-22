@@ -40,20 +40,21 @@ def main():
     output_dir = FLAGS.model_path
 
     NUM_ITERS = 1000
+    with tf.device('/cpu:0'):
 
-    images_batch, angles_batch, velocities_batch, endeffector_poses_batch = read_tf_record(data_path)
-    if int(tf.__version__[0]) >= 1.0:
-        robot_configs_batch = tf.concat([angles_batch, endeffector_poses_batch], 1)
-    else:
-        robot_configs_batch = tf.concat(1, [angles_batch, endeffector_poses_batch])
+        images_batch, angles_batch, velocities_batch, endeffector_poses_batch = read_tf_record(data_path)
+        if int(tf.__version__[0]) >= 1.0:
+            robot_configs_batch = tf.concat([angles_batch, endeffector_poses_batch], 1)
+        else:
+            robot_configs_batch = tf.concat(1, [angles_batch, endeffector_poses_batch])
 
-    actions_batch = velocities_batch
+        actions_batch = velocities_batch
 
-    model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch)
+        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch)
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
+
     # Make training session.
-    sess = tf.InteractiveSession(config=tf.ConfigProto(device_count = {'GPU': 0}))
+    sess = tf.InteractiveSession()
     summary_writer = tf.summary.FileWriter(output_dir, graph=sess.graph, flush_secs=10)
 
     # feed_dict = {
@@ -62,7 +63,7 @@ def main():
     # }
     tf.train.start_queue_runners(sess)
     sess.run(tf.global_variables_initializer())
-    print 'session begun'
+
 
     itr = 0
 
