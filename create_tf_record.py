@@ -36,21 +36,39 @@ def write_tf_records(images, angles, velocities, ef_poses, filepath):
     writer = tf.python_io.TFRecordWriter(filepath)
 
     feature = {}
+    s_order = np.random.choice(len(images), len(images), replace = False)
+    num_train = int(s_order.shape[0] * 0.9)
 
-    for traj_iter in range(len(images)):
-        print 'Outputting traj', traj_iter
+    print 'Train:', num_train, 'Test', s_order.shape[0] - num_train
+
+    for traj_iter in s_order[:num_train]:
+        print 'Outputting train traj', traj_iter
 
         image_raw = images[traj_iter].astype(np.uint8)
         image_raw = image_raw.tostring()
 
-        feature['image'] = _bytes_feature(image_raw)
-        feature['angle'] = _float_feature(angles[traj_iter].flatten().tolist())
-        feature['velocity'] = _float_feature(velocities[traj_iter].flatten().tolist())
-        feature['endeffector_pos'] = _float_feature(ef_poses[traj_iter].flatten().tolist())
+        feature['train/image'] = _bytes_feature(image_raw)
+        feature['train/angle'] = _float_feature(angles[traj_iter].flatten().tolist())
+        feature['train/velocity'] = _float_feature(velocities[traj_iter].flatten().tolist())
+        feature['train/endeffector_pos'] = _float_feature(ef_poses[traj_iter].flatten().tolist())
 
         example = tf.train.Example(features=tf.train.Features(feature=feature))
         writer.write(example.SerializeToString())
 
+    feature = {}
+    for traj_iter in s_order[num_train:]:
+        print 'Outputting test traj', traj_iter
+
+        image_raw = images[traj_iter].astype(np.uint8)
+        image_raw = image_raw.tostring()
+
+        feature['test/image'] = _bytes_feature(image_raw)
+        feature['test/angle'] = _float_feature(angles[traj_iter].flatten().tolist())
+        feature['test/velocity'] = _float_feature(velocities[traj_iter].flatten().tolist())
+        feature['test/endeffector_pos'] = _float_feature(ef_poses[traj_iter].flatten().tolist())
+
+        example = tf.train.Example(features=tf.train.Features(feature=feature))
+        writer.write(example.SerializeToString())
     writer.close()
 
 
