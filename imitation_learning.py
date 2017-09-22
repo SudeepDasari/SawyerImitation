@@ -6,9 +6,10 @@ import numpy as np
 import os
 
 
+
 class ImitationLearningModel:
 
-    def __init__(self, images, robot_configs, actions, vgg19_path):
+    def __init__(self, vgg19_path, images = None, robot_configs = None, actions = None):
         self.images = images
         self.robot_configs = robot_configs
         self.actions = actions
@@ -113,7 +114,7 @@ if __name__ == '__main__':
 
     actions_batch = velocities_batch
 
-    model = ImitationLearningModel(images_batch, robot_configs_batch, actions_batch, vgg19_path)
+    model = ImitationLearningModel(vgg19_path, images_batch, robot_configs_batch, actions_batch)
     model.build()
 
     print(model.predicted_actions, model.predicted_eeps)
