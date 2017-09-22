@@ -53,7 +53,7 @@ def main():
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
     # Make training session.
-    sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
+    sess = tf.InteractiveSession(config=tf.ConfigProto(device_count = {'GPU': 0}))
     summary_writer = tf.summary.FileWriter(output_dir, graph=sess.graph, flush_secs=10)
 
     # feed_dict = {
