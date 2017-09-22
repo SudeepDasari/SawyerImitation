@@ -39,7 +39,7 @@ def main():
     data_path = FLAGS.data_path
     output_dir = FLAGS.model_path
 
-    NUM_ITERS = 1000
+    NUM_ITERS = 100
 
     images_batch, angles_batch, velocities_batch, endeffector_poses_batch = read_tf_record(data_path)
     if int(tf.__version__[0]) >= 1.0:
@@ -67,11 +67,12 @@ def main():
     threads = tf.train.start_queue_runners(coord=coord)
 
     itr = 0
-    cost, _, summary_str = sess.run([model.loss, model.train_op, model.summ_op])
-                                    #feed_dict)
+    for itr in range(NUM_ITERS):
+        cost, _, summary_str = sess.run([model.loss, model.train_op, model.summ_op])
+                                        #feed_dict)
 
-    print cost
-    summary_writer.add_summary(summary_str, itr)
+        print cost
+        summary_writer.add_summary(summary_str, itr)
 
 
     coord.request_stop()
