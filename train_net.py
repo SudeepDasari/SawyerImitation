@@ -60,13 +60,18 @@ def main():
     #     model.iter_num: np.float32(itr),
     #     model.lr: conf['learning_rate'],
     # }
-    tf.train.start_queue_runners(sess)
+    sess.run(tf.local_variables_initializer())
     sess.run(tf.global_variables_initializer())
-
+    #tf.train.start_queue_runners(sess)
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(coord=coord)
 
     itr = 0
     cost, _, summary_str = sess.run([model.loss, model.train_op, model.summ_op])
                                     #feed_dict)
+    coord.request_stop()
+    coord.join(threads)
+
     print cost
     print summary_str
 
