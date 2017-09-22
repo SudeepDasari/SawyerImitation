@@ -53,6 +53,10 @@ def main():
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
     # Make training session.
+
+    vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+    saver = tf.train.Saver(vars, max_to_keep=0)
+
     sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
     summary_writer = tf.summary.FileWriter(output_dir, graph=sess.graph, flush_secs=10)
 
@@ -67,6 +71,7 @@ def main():
     threads = tf.train.start_queue_runners(coord=coord)
 
     itr = 0
+
     for itr in range(NUM_ITERS):
         cost, _, summary_str = sess.run([model.loss, model.train_op, model.summ_op])
                                         #feed_dict)
@@ -74,7 +79,7 @@ def main():
         print cost
         summary_writer.add_summary(summary_str, itr)
 
-
+    saver.save(sess, output_dir + '/modelfinal')
     coord.request_stop()
     coord.join(threads)
 
