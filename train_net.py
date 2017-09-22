@@ -62,7 +62,7 @@ def main():
     # }
     tf.train.start_queue_runners(sess)
     sess.run(tf.global_variables_initializer())
-
+    print 'session begun'
 
     itr = 0
 
