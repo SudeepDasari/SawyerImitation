@@ -1,7 +1,5 @@
 import tensorflow as tf
-from tensorflow.python.platform import flags
-FLAGS = flags.FLAGS
-flags.DEFINE_string('data_path', './', 'path to tfrecords file')
+
 
 NUM_FRAMES = 60
 NUM_JOINTS = 7
@@ -50,23 +48,44 @@ def read_tf_record(data_path):
 
     return images, angles, velocities, endeffector_poses
 
+
+def main():
+    from tensorflow.python.platform import flags
+
+    FLAGS = flags.FLAGS
+    flags.DEFINE_string('data_path', './', 'path to tfrecords file')
+
+    import cv2
         # # Initialize all global and local variables
-        # init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
-        # sess.run(init_op)
+    with tf.Session(config = tf.ConfigProto(
+        device_count = {'GPU': 0}
+    )) as sess:
+        images, angles, velocities, endeffector_poses = read_tf_record(FLAGS.data_path)
+
+        init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
+        sess.run(init_op)
         # # Create a coordinator and run all QueueRunner objects
-        # coord = tf.train.Coordinator()
-        # threads = tf.train.start_queue_runners(coord=coord)
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(coord=coord)
+
         #
-        # for batch_index in range(5):
-        #     img, vel = sess.run([images, velocities])
-        #
-        #     for i in range(15):
-        #         cv2.imshow('img', img[i])
-        #         cv2.waitKey(0)
+        for batch_index in range(5):
+
+            img, vel, ef, ang = sess.run([images, velocities, endeffector_poses, angles])
+
+            print 'vel', vel.shape
+            print 'ef', ef.shape
+            print 'ang', ang.shape
+            for i in range(15):
+                cv2.imshow('img', img[i])
+                cv2.waitKey(0)
 
     #     # Stop the threads
-    #     coord.request_stop()
+        coord.request_stop()
     #
     #     # Wait for threads to stop
     #     coord.join(threads)
-    # sess.close()
+    sess.close()
+
+if __name__ == '__main__':
+    main()

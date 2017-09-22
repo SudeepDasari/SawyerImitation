@@ -14,6 +14,7 @@ flags.DEFINE_string('out_path', './', 'output file directory')
 
 def load_image(path):
     img = cv2.imread(path)
+    img =  cv2.resize(img, (224, 224), interpolation=cv2.INTER_AREA)
     return img
 
 
@@ -37,7 +38,7 @@ def write_tf_records(images, angles, velocities, ef_poses, filepath):
     feature = {}
 
     for traj_iter in range(len(images)):
-        print 'On traj', traj_iter
+        print 'Outputting traj', traj_iter
 
         image_raw = images[traj_iter].astype(np.uint8)
         image_raw = image_raw.tostring()
@@ -59,6 +60,7 @@ def main():
     groups = [x for x in os.listdir(data_path) if 'traj_group' in x]
 
     for traj_group in groups:
+        print 'reading in traj_group', traj_group
         group_path = data_path + '/' + traj_group
         group_out = out_path + '/traj_group'+'_record.tfrecords'
 
@@ -67,16 +69,16 @@ def main():
         images, angles, velocities, ef_poses = [], [], [], []
 
         for traj in trajs:
+            print 'reading in traj', traj
             traj_path = group_path + '/' + traj
 
             traj_images = []
             image_files = glob.glob(traj_path + '/images/*.jpg')
 
-            for i in range(len(image_files)):
-                #im_path = [x for x in image_files if 'im%d' % (i) in x][0]
-		 img = load_image(image_files[i])
-                img = cv2.resize(img, (224, 224), interpolation=cv2.INTER_AREA)
+            for img_path in image_files:
+                img = load_image(img_path)
                 traj_images.append(img)
+
             pkl_path = glob.glob(traj_path + '/*.pkl')[0]
 
             sawyer_data = cPickle.load(open(pkl_path, 'rb'))

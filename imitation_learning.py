@@ -5,9 +5,6 @@ import tensorflow.contrib.slim as slim
 import numpy as np
 import os
 
-FLAGS = flags.FLAGS
-flags.DEFINE_string('vgg19_path', './', 'path to tfrecords file')
-
 
 class ImitationLearningModel:
 
@@ -99,11 +96,21 @@ class ImitationLearningModel:
 
 
 if __name__ == '__main__':
+    FLAGS = flags.FLAGS
+    flags.DEFINE_string('vgg19_path', './', 'path to npy file')
+    flags.DEFINE_string('data_path', './', 'path to tfrecords file')
+
     vgg19_path = FLAGS.vgg19_path
+    data_path = FLAGS.data_path
 
     from read_tf_record import read_tf_record
-    images_batch, angles_batch, velocities_batch, endeffector_poses_batch = read_tf_record('train/')
-    robot_configs_batch = tf.concat([angles_batch, endeffector_poses_batch], 1)
+
+    images_batch, angles_batch, velocities_batch, endeffector_poses_batch = read_tf_record(data_path)
+    if int(tf.__version__[0]) >= 1.0:
+        robot_configs_batch = tf.concat([angles_batch, endeffector_poses_batch], 1)
+    else:
+        robot_configs_batch = tf.concat(1, [angles_batch, endeffector_poses_batch])
+
     actions_batch = velocities_batch
 
     model = ImitationLearningModel(images_batch, robot_configs_batch, actions_batch, vgg19_path)
