@@ -69,11 +69,14 @@ def main():
     itr = 0
     cost, _, summary_str = sess.run([model.loss, model.train_op, model.summ_op])
                                     #feed_dict)
+
+    print cost
+    summary_writer.add_summary(summary_str, itr)
+
+
     coord.request_stop()
     coord.join(threads)
 
-    print cost
-    print summary_str
 
 
 if __name__ == '__main__':
