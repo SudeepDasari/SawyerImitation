@@ -56,7 +56,7 @@ class ImitationLearningModel:
 
             fp_flat = tf.reshape(tf.concat([fp_x, fp_y], 1), [-1, num_fp * 2])
 
-            conv_out = tf.concat([fp_flat, tf.reshape(self.robot_configs, [15, 10])], 1) # dim of angles: 7, dim of eep: 3
+            conv_out = tf.concat([fp_flat, tf.reshape(self.robot_configs, [15, 10])], 1) # dim of angles: 7, dim of eeps: 3
 
             layer4 = slim.layers.fully_connected(conv_out, 100, scope='fc1')
 
@@ -64,9 +64,11 @@ class ImitationLearningModel:
 
             layer6 = slim.layers.fully_connected(layer5, 100, scope='fc3')
 
-            fc_out = slim.layers.fully_connected(layer6, 10, scope='fc4') # dim of velocities: 7, dim of eep: 3
+            fc_actions = slim.layers.fully_connected(layer6, 7, scope='fc4_1') # dim of velocities: 7
 
-            self.predicted_actions, self.predicted_eeps = tf.split(fc_out, [7, 3], 1)
+            fc_eeps = slim.layers.fully_connected(layer6, 3, scope='fc4_2') # dim of eeps: 3
+
+            self.predicted_actions, self.predicted_eeps = fc_actions, fc_eeps
 
     # Source: https://github.com/machrisaa/tensorflow-vgg/blob/master/vgg19.py
     def vgg_layer(self, images):
