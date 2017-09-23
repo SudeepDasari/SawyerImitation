@@ -25,7 +25,7 @@ def read_tf_record(data_path):
 
 
     # Create a list of filenames and pass it to a queue
-    filename_queue = tf.train.string_input_producer([data_path], num_epochs=1)
+    filename_queue = tf.train.string_input_producer([data_path])
     # Define a reader and read the next record
     reader = tf.TFRecordReader()
     _, serialized_example = reader.read(filename_queue)
@@ -44,8 +44,10 @@ def read_tf_record(data_path):
 
 
     # Creates batches by randomly shuffling tensors. each training example is (image,velocity) pair
-    images, angles, velocities, endeffector_poses = tf.train.shuffle_batch([image, angle, velocity, endeffector_pos], batch_size=32, capacity=1800, num_threads=1, min_after_dequeue=1200, enqueue_many=True)
 
+    images, angles, velocities, endeffector_poses = tf.train.shuffle_batch([image, angle, velocity, endeffector_pos],
+                                                                           batch_size=30, capacity=3000, num_threads=30,
+                                                                           min_after_dequeue=900, enqueue_many=True)
     return images, angles, velocities, endeffector_poses
 
 
