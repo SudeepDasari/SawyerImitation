@@ -20,7 +20,7 @@ def read_tf_record(data_path):
         'train/image': tf.FixedLenFeature([IMG_WIDTH * IMG_HEIGHT * NUM_FRAMES * 3], tf.string),
         'train/angle': tf.FixedLenFeature([NUM_JOINTS * NUM_FRAMES], tf.float32),
         'train/velocity': tf.FixedLenFeature([NUM_JOINTS * NUM_FRAMES], tf.float32),
-        'train/endeffector_pos': tf.FixedLenFeature([STATE_DIM * NUM_FRAMES], tf.float32),
+        'train/endeffector_pos': tf.FixedLenFeature([STATE_DIM * NUM_FRAMES], tf.float32)
     }
 
 
@@ -59,28 +59,32 @@ def main():
 
     import cv2
         # # Initialize all global and local variables
+    images, angles, velocities, endeffector_poses = read_tf_record(FLAGS.data_path)
+
     with tf.Session(config = tf.ConfigProto(
         device_count = {'GPU': 0}
     )) as sess:
-        images, angles, velocities, endeffector_poses = read_tf_record(FLAGS.data_path)
+
+
 
         init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
         sess.run(init_op)
         # # Create a coordinator and run all QueueRunner objects
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
-
         #
-        for batch_index in range(5):
+        for batch_index in range(300):
 
             img, vel, ef, ang = sess.run([images, velocities, endeffector_poses, angles])
 
+
+            print 'batch_index', batch_index
             print 'vel', vel.shape
             print 'ef', ef.shape
-            print 'ang', ang.shape
-            for i in range(15):
-                cv2.imshow('img', img[i])
-                cv2.waitKey(0)
+            print 'ang', ang.sum()
+            # for i in range(15):
+            #     cv2.imshow('img', img[i])
+            #     cv2.waitKey(0)
 
     #     # Stop the threads
         coord.request_stop()
@@ -88,6 +92,8 @@ def main():
     #     # Wait for threads to stop
     #     coord.join(threads)
     sess.close()
+
+
 
 if __name__ == '__main__':
     main()

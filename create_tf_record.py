@@ -32,10 +32,10 @@ def _int64_feature(value):
 
 def write_tf_records(images, angles, velocities, ef_poses, filepath):
 
-    print 'Writing', filepath
-    writer = tf.python_io.TFRecordWriter(filepath)
 
-    feature = {}
+    writer = tf.python_io.TFRecordWriter(filepath + 'train.tfrecords')
+    print 'Writing', filepath + 'train.tfrecords'
+
     s_order = np.random.choice(len(images), len(images), replace = False)
     num_train = int(s_order.shape[0] * 0.9)
 
@@ -46,26 +46,40 @@ def write_tf_records(images, angles, velocities, ef_poses, filepath):
 
         image_raw = images[traj_iter].astype(np.uint8)
         image_raw = image_raw.tostring()
-
+        feature = {}
         feature['train/image'] = _bytes_feature(image_raw)
-        feature['train/angle'] = _float_feature(angles[traj_iter].flatten().tolist())
-        feature['train/velocity'] = _float_feature(velocities[traj_iter].flatten().tolist())
-        feature['train/endeffector_pos'] = _float_feature(ef_poses[traj_iter].flatten().tolist())
+        feature['train/angle'] = _float_feature(angles[traj_iter].astype(np.float32).flatten().tolist())
+        feature['train/velocity'] = _float_feature(velocities[traj_iter].astype(np.float32).flatten().tolist())
+        feature['train/endeffector_pos'] = _float_feature(ef_poses[traj_iter].astype(np.float32).flatten().tolist())
+
+        assert 'train/image' in feature, "Missing image entry"
+        assert 'train/angle' in feature, "Missing angle entry"
+        assert 'train/velocity' in feature, "Missing velocity entry"
+        assert 'train/endeffector_pos' in feature, "Missing end effector entry"
 
         example = tf.train.Example(features=tf.train.Features(feature=feature))
         writer.write(example.SerializeToString())
+    writer.close()
 
-    feature = {}
+    writer = tf.python_io.TFRecordWriter(filepath + 'test.tfrecords')
+    print 'Writing', filepath + 'test.tfrecords'
     for traj_iter in s_order[num_train:]:
         print 'Outputting test traj', traj_iter
 
         image_raw = images[traj_iter].astype(np.uint8)
         image_raw = image_raw.tostring()
+        feature = {}
 
         feature['test/image'] = _bytes_feature(image_raw)
-        feature['test/angle'] = _float_feature(angles[traj_iter].flatten().tolist())
-        feature['test/velocity'] = _float_feature(velocities[traj_iter].flatten().tolist())
-        feature['test/endeffector_pos'] = _float_feature(ef_poses[traj_iter].flatten().tolist())
+        feature['test/angle'] = _float_feature(angles[traj_iter].astype(np.float32).flatten().tolist())
+        feature['test/velocity'] = _float_feature(velocities[traj_iter].astype(np.float32).flatten().tolist())
+        feature['test/endeffector_pos'] = _float_feature(ef_poses[traj_iter].astype(np.float32).flatten().tolist())
+
+        assert 'test/image' in feature, "Missing image entry"
+        assert 'test/angle' in feature, "Missing angle entry"
+        assert 'test/velocity' in feature, "Missing velocity entry"
+        assert 'test/endeffector_pos' in feature, "Missing end effector entry"
+
 
         example = tf.train.Example(features=tf.train.Features(feature=feature))
         writer.write(example.SerializeToString())
@@ -80,7 +94,7 @@ def main():
     for traj_group in groups:
         print 'reading in traj_group', traj_group
         group_path = data_path + '/' + traj_group
-        group_out = out_path + '/traj_group'+'_record.tfrecords'
+        group_out = out_path + '/traj_group'+'_record'
 
         trajs = [x for x in os.listdir(group_path) if 'traj' in x]
         trajs = sorted(trajs, key = lambda x: int(x.split('traj')[1]))

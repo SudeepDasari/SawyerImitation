@@ -39,7 +39,7 @@ def main():
     data_path = FLAGS.data_path
     output_dir = FLAGS.model_path
 
-    NUM_ITERS = 20000
+    NUM_ITERS = 18000
 
     images_batch, angles_batch, velocities_batch, endeffector_poses_batch = read_tf_record(data_path)
     if int(tf.__version__[0]) >= 1.0:
@@ -76,9 +76,10 @@ def main():
         cost, _, summary_str = sess.run([model.loss, model.train_op, model.summ_op])
                                         #feed_dict)
         if itr % 100 == 0:
-            print 'Cost', cost, 'on iter', itr
+            print 'Cost', cost, 'On iter', itr
 
-        if itr % 1000 == 0 and itr > 0:
+        if itr % 180 == 0 and itr > 0:
+
             saver.save(sess, output_dir + '/model'+ str(itr))
 
         summary_writer.add_summary(summary_str, itr)
