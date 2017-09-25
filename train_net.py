@@ -45,7 +45,10 @@ def main():
 
     NUM_ITERS = 18000
 
-    images_batch, angles_batch, velocities_batch, endeffector_poses_batch = read_tf_record(data_path)
+    if FLAGS.test:
+        images_batch, angles_batch, velocities_batch, endeffector_poses_batch = read_tf_record(data_path, d_append='test')
+    else:
+        images_batch, angles_batch, velocities_batch, endeffector_poses_batch = read_tf_record(data_path)
     if int(tf.__version__[0]) >= 1.0:
         robot_configs_batch = tf.concat([angles_batch, endeffector_poses_batch], 1)
     else:
@@ -64,17 +67,20 @@ def main():
 
     sess.run(tf.local_variables_initializer())
     sess.run(tf.global_variables_initializer())
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(coord=coord)
 
     if FLAGS.test:
         model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, training=False)
         ckpt = tf.train.get_checkpoint_state(output_dir + '/modelfinal')
         saver.restore(sess, ckpt.model_checkpoint_path)
-        loss, summary_str = sess.run([model.loss, model.summ_op])
-        summary_writer.add_summary(summary_str)
+        for i in range(20):
+            loss, summary_str = sess.run([model.loss, model.summ_op])
+            print 'loss is', loss
+            summary_writer.add_summary(summary_str, i)
 
     else:
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord)
+
 
         model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch)
 
@@ -91,8 +97,9 @@ def main():
             summary_writer.add_summary(summary_str, itr)
 
         saver.save(sess, output_dir + '/modelfinal')
-        coord.request_stop()
-        coord.join(threads)
+
+    coord.request_stop()
+    coord.join(threads)
 
 
 
