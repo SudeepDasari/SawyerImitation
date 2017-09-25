@@ -43,8 +43,8 @@ def read_tf_record(data_path, d_append = 'train'):
     use_frame = np.zeros(NUM_FRAMES)
     use_frame[0] = 1
 
-    use_frame = tf.reshape(tf.convert_to_tensor(use_frame), shape=[NUM_FRAMES, 1])
-    final_endeffector_pos = tf.reshape(tf.tile(tf.slice(endeffector_pos, -1, 1), [NUM_FRAMES]),
+    use_frame = tf.reshape(tf.convert_to_tensor(use_frame, dtype=tf.float32), shape=[NUM_FRAMES, 1])
+    final_endeffector_pos = tf.reshape(tf.tile(tf.slice(endeffector_pos, [-1, 0], [1, 3]), [NUM_FRAMES, 1]),
                                        shape=[NUM_FRAMES, STATE_DIM])
 
     # Reshape image data into original video

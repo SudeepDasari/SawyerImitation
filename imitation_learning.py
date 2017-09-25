@@ -56,7 +56,7 @@ class ImitationLearningModel:
 
             conv_out = tf.concat([fp_flat,
                                   tf.reshape(self.robot_configs, [30, 10]),  # dim of angles: 7, dim of eeps: 3
-                                  tf.zeros([10], dtype=tf.float32)],  # bias transformation
+                                  tf.zeros([30, 10], dtype=tf.float32)],  # bias transformation
                                  1)
 
             layer4 = slim.layers.fully_connected(conv_out, 100, scope='fc1')
