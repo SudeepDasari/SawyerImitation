@@ -25,11 +25,21 @@ def mean_squared_error(true, pred):
 
 
 class Model:
-    def __init__(self, vgg19_path, images_batch, robot_configs_batch, actions_batch, training=True):
-        self.m =ImitationLearningModel(vgg19_path, images_batch, robot_configs_batch, actions_batch)
+    def __init__(self,
+                 vgg19_path,
+                 images_batch,
+                 robot_configs_batch,
+                 actions_batch,
+                 use_frames_batch,
+                 final_endeffector_poses_batch,
+                 training=True):
+        self.m = ImitationLearningModel(vgg19_path, images_batch, robot_configs_batch, actions_batch)
         self.m.build()
 
-        loss = mean_squared_error(self.m.actions, self.m.predicted_actions)
+        action_loss = mean_squared_error(self.m.actions, self.m.predicted_actions)
+        eep_loss = mean_squared_error(np.multiply(use_frames_batch, final_endeffector_poses_batch),
+                                      np.multiply(use_frames_batch, self.m.predicted_eeps))
+        loss = action_loss + eep_loss
         self.loss = loss
         self.lr = 0.001
         self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
@@ -46,9 +56,11 @@ def main():
     NUM_ITERS = 18000
 
     if FLAGS.test:
-        images_batch, angles_batch, velocities_batch, endeffector_poses_batch = read_tf_record(data_path, d_append='test')
+        images_batch, angles_batch, velocities_batch, endeffector_poses_batch, use_frames_batch, \
+            final_endeffector_poses_batch = read_tf_record(data_path, d_append='test')
     else:
-        images_batch, angles_batch, velocities_batch, endeffector_poses_batch = read_tf_record(data_path)
+        images_batch, angles_batch, velocities_batch, endeffector_poses_batch, use_frames_batch, \
+            final_endeffector_poses_batch = read_tf_record(data_path)
     if int(tf.__version__[0]) >= 1.0:
         robot_configs_batch = tf.concat([angles_batch, endeffector_poses_batch], 1)
     else:
@@ -57,9 +69,11 @@ def main():
     actions_batch = velocities_batch
 
     if FLAGS.test:
-        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, training=False)
+        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, use_frames_batch,
+                      final_endeffector_poses_batch, training=False)
     else:
-        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch)
+        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, use_frames_batch,
+                      final_endeffector_poses_batch)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
     # Make training session.

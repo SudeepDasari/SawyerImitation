@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 
 NUM_FRAMES = 60
@@ -39,16 +40,22 @@ def read_tf_record(data_path, d_append = 'train'):
     velocity = tf.reshape(features[d_append+'/velocity'], shape=[NUM_FRAMES, NUM_JOINTS])
     endeffector_pos = tf.reshape(features[d_append+'/endeffector_pos'], shape=[NUM_FRAMES, STATE_DIM])
 
+    use_frame = np.zeros(NUM_FRAMES)
+    use_frame[0] = 1
+
+    use_frame = tf.reshape(tf.convert_to_tensor(use_frame), shape=[NUM_FRAMES, 1])
+    final_endeffector_pos = tf.reshape(tf.tile(tf.slice(endeffector_pos, -1, 1), [NUM_FRAMES]),
+                                       shape=[NUM_FRAMES, STATE_DIM])
+
     # Reshape image data into original video
     image = tf.reshape(image, [NUM_FRAMES, IMG_HEIGHT, IMG_WIDTH, COLOR_CHANNELS])
 
-
     # Creates batches by randomly shuffling tensors. each training example is (image,velocity) pair
-
-    images, angles, velocities, endeffector_poses = tf.train.shuffle_batch([image, angle, velocity, endeffector_pos],
-                                                                           batch_size=30, capacity=3000, num_threads=30,
-                                                                           min_after_dequeue=900, enqueue_many=True)
-    return images, angles, velocities, endeffector_poses
+    images, angles, velocities, endeffector_poses, use_frames, final_endeffector_poses = \
+        tf.train.shuffle_batch([image, angle, velocity, endeffector_pos, use_frame, final_endeffector_pos],
+                               batch_size=30, capacity=3000, num_threads=30,
+                               min_after_dequeue=900, enqueue_many=True)
+    return images, angles, velocities, endeffector_poses, use_frames, final_endeffector_poses
 
 
 def main():

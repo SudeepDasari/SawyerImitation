@@ -9,7 +9,7 @@ import os
 
 class ImitationLearningModel:
 
-    def __init__(self, vgg19_path, images = None, robot_configs = None, actions = None):
+    def __init__(self, vgg19_path, images=None, robot_configs=None, actions=None):
         self.images = images
         self.robot_configs = robot_configs
         self.actions = actions
@@ -54,7 +54,10 @@ class ImitationLearningModel:
 
             fp_flat = tf.reshape(tf.concat([fp_x, fp_y], 1), [-1, num_fp * 2])
 
-            conv_out = tf.concat([fp_flat, tf.reshape(self.robot_configs, [30, 10])], 1) # dim of angles: 7, dim of eeps: 3
+            conv_out = tf.concat([fp_flat,
+                                  tf.reshape(self.robot_configs, [30, 10]),  # dim of angles: 7, dim of eeps: 3
+                                  tf.zeros([10], dtype=tf.float32)],  # bias transformation
+                                 1)
 
             layer4 = slim.layers.fully_connected(conv_out, 100, scope='fc1')
 
@@ -62,9 +65,9 @@ class ImitationLearningModel:
 
             layer6 = slim.layers.fully_connected(layer5, 100, scope='fc3')
 
-            fc_actions = slim.layers.fully_connected(layer6, 7, scope='fc4_1') # dim of velocities: 7
+            fc_actions = slim.layers.fully_connected(layer6, 7, scope='fc4_1')  # dim of velocities: 7
 
-            fc_eeps = slim.layers.fully_connected(layer6, 3, scope='fc4_2') # dim of eeps: 3
+            fc_eeps = slim.layers.fully_connected(layer6, 3, scope='fc4_2')  # dim of eeps: 3
 
             self.predicted_actions, self.predicted_eeps = fc_actions, fc_eeps
 
