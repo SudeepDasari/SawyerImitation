@@ -56,6 +56,11 @@ def main():
 
     actions_batch = velocities_batch
 
+    if FLAGS.test:
+        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, training=False)
+    else:
+        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch)
+    
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
     # Make training session.
 
@@ -71,7 +76,7 @@ def main():
     threads = tf.train.start_queue_runners(coord=coord)
 
     if FLAGS.test:
-        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, training=False)
+
         ckpt = tf.train.get_checkpoint_state(output_dir + '/modelfinal')
         saver.restore(sess, ckpt.model_checkpoint_path)
         for i in range(20):
@@ -80,9 +85,6 @@ def main():
             summary_writer.add_summary(summary_str, i)
 
     else:
-
-
-        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch)
 
         for itr in range(NUM_ITERS):
             cost, _, summary_str = sess.run([model.loss, model.train_op, model.summ_op])
