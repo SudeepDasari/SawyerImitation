@@ -60,7 +60,7 @@ def main():
         model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, training=False)
     else:
         model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch)
-    
+
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
     # Make training session.
 
@@ -77,8 +77,8 @@ def main():
 
     if FLAGS.test:
 
-        ckpt = tf.train.get_checkpoint_state(output_dir + '/modelfinal')
-        saver.restore(sess, ckpt.model_checkpoint_path)
+        saver.restore(sess, output_dir)
+        
         for i in range(20):
             loss, summary_str = sess.run([model.loss, model.summ_op])
             print 'loss is', loss
