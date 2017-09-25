@@ -10,6 +10,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('vgg19_path', './', 'path to npy file')
 flags.DEFINE_string('data_path', './', 'path to tfrecords file')
 flags.DEFINE_string('model_path', './', 'path to output model/stats')
+flags.DEFINE_bool('test', False, 'run trained model on test data')
 
 def mean_squared_error(true, pred):
     """L2 distance between tensors true and pred.
@@ -24,7 +25,7 @@ def mean_squared_error(true, pred):
 
 
 class Model:
-    def __init__(self, vgg19_path, images_batch, robot_configs_batch, actions_batch):
+    def __init__(self, vgg19_path, images_batch, robot_configs_batch, actions_batch, training=True):
         self.m =ImitationLearningModel(vgg19_path, images_batch, robot_configs_batch, actions_batch)
         self.m.build()
 
@@ -32,7 +33,10 @@ class Model:
         self.loss = loss
         self.lr = 0.001
         self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
-        self.summ_op = tf.summary.merge([tf.summary.scalar('loss', loss)])
+        if training:
+            self.summ_op = tf.summary.merge([tf.summary.scalar('loss', loss)])
+        else:
+            self.summ_op = tf.summary.merge([tf.summary.scalar('test_loss', loss)])
 
 def main():
     vgg19_path = FLAGS.vgg19_path
@@ -49,8 +53,6 @@ def main():
 
     actions_batch = velocities_batch
 
-    model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch)
-
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
     # Make training session.
 
@@ -60,28 +62,31 @@ def main():
     sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
     summary_writer = tf.summary.FileWriter(output_dir, graph=sess.graph, flush_secs=10)
 
-    # feed_dict = {
-    #     model.iter_num: np.float32(itr),
-    #     model.lr: conf['learning_rate'],
-    # }
     sess.run(tf.local_variables_initializer())
     sess.run(tf.global_variables_initializer())
-    #tf.train.start_queue_runners(sess)
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(coord=coord)
 
-    itr = 0
+    if FLAGS.test:
+        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, training=False)
+        ckpt = tf.train.get_checkpoint_state(output_dir + '/modelfinal')
+        saver.restore(sess, ckpt.model_checkpoint_path)
+        loss, summary_str = sess.run([model.loss, model.summ_op])
+        summary_writer.add_summary(summary_str)
 
-    for itr in range(NUM_ITERS):
-        cost, _, summary_str = sess.run([model.loss, model.train_op, model.summ_op])
-                                        #feed_dict)
+    else:
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(coord=coord)
 
-        print cost
-        summary_writer.add_summary(summary_str, itr)
+        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch)
+        for itr in range(NUM_ITERS):
+            cost, _, summary_str = sess.run([model.loss, model.train_op, model.summ_op])
+                                            #feed_dict)
 
-    saver.save(sess, output_dir + '/modelfinal')
-    coord.request_stop()
-    coord.join(threads)
+            print cost
+            summary_writer.add_summary(summary_str, itr)
+
+        saver.save(sess, output_dir + '/modelfinal')
+        coord.request_stop()
+        coord.join(threads)
 
 
 
