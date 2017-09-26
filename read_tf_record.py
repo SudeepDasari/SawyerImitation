@@ -10,7 +10,7 @@ IMG_HEIGHT = 224
 COLOR_CHANNELS = 3
 
 
-def read_tf_record(data_path, d_append = 'train'):
+def read_tf_record(data_path, d_append='train'):
     #gets data path
     # data_path = FLAGS.data_path
 
@@ -39,9 +39,8 @@ def read_tf_record(data_path, d_append = 'train'):
     angle = tf.reshape(features[d_append+'/angle'], shape=[NUM_FRAMES, NUM_JOINTS])
     velocity = tf.reshape(features[d_append+'/velocity'], shape=[NUM_FRAMES, NUM_JOINTS])
     endeffector_pos = tf.reshape(features[d_append+'/endeffector_pos'], shape=[NUM_FRAMES, STATE_DIM])
-    final_endeffector_pos = tf.reshape(tf.tile(tf.slice(
-        tf.reshape(features[d_append+'/endeffector_pos'], shape=[NUM_FRAMES, STATE_DIM]),
-        [NUM_FRAMES-1, 0], [1, 3]), [NUM_FRAMES, 1]), shape=[NUM_FRAMES, STATE_DIM])
+
+    final_endeffector_pos = tf.reshape(tf.tile(endeffector_pos[-1:, :], [NUM_FRAMES, 1]), shape=[NUM_FRAMES, STATE_DIM])
 
     use_frame = np.zeros(NUM_FRAMES)
     use_frame[0] = 1
@@ -94,6 +93,8 @@ def main():
             print 'vel', vel.shape
             print 'ef', ef.shape
             print 'ang', ang.sum()
+            print 'fef', fef.shape
+
             # for i in range(15):
             #     cv2.imshow('img', img[i])
             #     cv2.waitKey(0)

@@ -10,7 +10,6 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('vgg19_path', './', 'path to npy file')
 flags.DEFINE_string('data_path', './', 'path to tfrecords file')
 flags.DEFINE_string('model_path', './', 'path to output model/stats')
-flags.DEFINE_bool('test', False, 'run trained model on test data')
 
 def mean_squared_error(true, pred):
     """L2 distance between tensors true and pred.
@@ -32,9 +31,15 @@ class Model:
                  actions_batch,
                  use_frames_batch,
                  final_endeffector_poses_batch,
-                 training=True):
-        self.m = ImitationLearningModel(vgg19_path, images_batch, robot_configs_batch, actions_batch)
-        self.m.build()
+                 reuse_train_scope = None):
+
+        if reuse_train_scope is None:
+            self.m = ImitationLearningModel(vgg19_path, images_batch, robot_configs_batch, actions_batch)
+            self.m.build()
+        else:
+            with tf.variable_scope(reuse_train_scope, reuse=True):
+                self.m = ImitationLearningModel(vgg19_path, images_batch, robot_configs_batch, actions_batch)
+                self.m.build()
 
         action_loss = mean_squared_error(self.m.actions, self.m.predicted_actions)
         eep_loss = mean_squared_error(np.multiply(use_frames_batch, final_endeffector_poses_batch),
@@ -43,37 +48,33 @@ class Model:
         self.loss = loss
         self.lr = 0.001
         self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
-        if training:
-            self.summ_op = tf.summary.merge([tf.summary.scalar('loss', loss)])
-        else:
-            self.summ_op = tf.summary.merge([tf.summary.scalar('test_loss', loss)])
+        self.summ_op = tf.summary.merge([tf.summary.scalar('loss', loss)])
+
+
+
 
 def main():
     vgg19_path = FLAGS.vgg19_path
     data_path = FLAGS.data_path
     output_dir = FLAGS.model_path
 
-    NUM_ITERS = 18000
+    NUM_ITERS = 36000
 
-    if FLAGS.test:
-        images_batch, angles_batch, velocities_batch, endeffector_poses_batch, use_frames_batch, \
-            final_endeffector_poses_batch = read_tf_record(data_path, d_append='test')
-    else:
-        images_batch, angles_batch, velocities_batch, endeffector_poses_batch, use_frames_batch, \
-            final_endeffector_poses_batch = read_tf_record(data_path)
-    if int(tf.__version__[0]) >= 1.0:
+    with tf.variable_scope('model', reuse=None) as training_scope:
+        images_batch, angles_batch, actions_batch, endeffector_poses_batch, use_frames_batch, \
+            final_endeffector_poses_batch = read_tf_record(data_path + 'train.tfrecords')
+
         robot_configs_batch = tf.concat([angles_batch, endeffector_poses_batch], 1)
-    else:
-        robot_configs_batch = tf.concat(1, [angles_batch, endeffector_poses_batch])
-
-    actions_batch = velocities_batch
-
-    if FLAGS.test:
-        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, use_frames_batch,
-                      final_endeffector_poses_batch, training=False)
-    else:
         model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, use_frames_batch,
                       final_endeffector_poses_batch)
+
+    with tf.variable_scope('val_model', reuse=None):
+        val_images_batch, val_angles_batch, val_actions_batch, val_endeffector_poses_batch, val_use_frames_batch, \
+        val_final_endeffector_poses_batch = read_tf_record(data_path + 'test.tfrecords', d_append='test')
+
+        val_robot_configs_batch = tf.concat([val_angles_batch, val_endeffector_poses_batch], 1)
+        val_model = Model(vgg19_path, val_images_batch, val_robot_configs_batch, val_actions_batch, val_use_frames_batch,
+                      val_final_endeffector_poses_batch, training_scope)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
     # Make training session.
@@ -89,30 +90,29 @@ def main():
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(coord=coord)
 
-    if FLAGS.test:
+    for itr in range(NUM_ITERS):
+        if itr % 180 == 0:
+            print 'Running Validation'
+            val_loss = 0
+            for t_itr in range(30):
+                val_loss += sess.run([val_model.loss])[0] / 30.0
 
-        saver.restore(sess, output_dir)
-        
-        for i in range(20):
-            loss, summary_str = sess.run([model.loss, model.summ_op])
-            print 'loss is', loss
-            summary_writer.add_summary(summary_str, i)
+            val_summary = tf.Summary()
+            val_summary.value.add(tag="val_model/val_loss", simple_value=val_loss)
 
-    else:
+            summary_writer.add_summary(val_summary, itr)
+            print 'Validation Loss:', val_loss
 
-        for itr in range(NUM_ITERS):
-            cost, _, summary_str = sess.run([model.loss, model.train_op, model.summ_op])
+        cost, _, summary_str = sess.run([model.loss, model.train_op, model.summ_op])
                                             #feed_dict)
-            if itr % 100 == 0:
-                print 'Cost', cost, 'On iter', itr
-
-            if itr % 180 == 0 and itr > 0:
-
-                saver.save(sess, output_dir + '/model'+ str(itr))
-
+        if itr % 10 == 0:
             summary_writer.add_summary(summary_str, itr)
+        if itr % 100 == 0:
+            print 'Cost', cost, 'On iter', itr
+        if itr % 180 == 0 and itr > 0:
+            saver.save(sess, output_dir + '/model'+ str(itr))
 
-        saver.save(sess, output_dir + '/modelfinal')
+    saver.save(sess, output_dir + '/modelfinal')
 
     coord.request_stop()
     coord.join(threads)
