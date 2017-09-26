@@ -43,9 +43,14 @@ def read_tf_record(data_path, d_append = 'train'):
     use_frame = np.zeros(NUM_FRAMES)
     use_frame[0] = 1
 
-    use_frame = tf.reshape(tf.convert_to_tensor(use_frame, dtype=tf.float32), shape=[NUM_FRAMES, 1])
-    final_endeffector_pos = tf.reshape(tf.tile(tf.slice(endeffector_pos, [-1, 0], [1, 3]), [NUM_FRAMES, 1]),
-                                       shape=[NUM_FRAMES, STATE_DIM])
+    use_frame = tf.train.input_producer(
+        tf.reshape(tf.convert_to_tensor(use_frame, dtype=tf.float32), shape=[NUM_FRAMES, 1]),
+        shape=[NUM_FRAMES, 1],
+        shuffle=False)
+    final_endeffector_pos = tf.train.input_producer(
+        tf.reshape(tf.tile(tf.slice(endeffector_pos, [-1, 0], [1, 3]), [NUM_FRAMES, 1]), shape=[NUM_FRAMES, STATE_DIM]),
+        shape=[NUM_FRAMES, STATE_DIM],
+        shuffle=False)
 
     # Reshape image data into original video
     image = tf.reshape(image, [NUM_FRAMES, IMG_HEIGHT, IMG_WIDTH, COLOR_CHANNELS])
