@@ -43,24 +43,26 @@ def read_tf_record(data_path, d_append = 'train'):
     use_frame = np.zeros(NUM_FRAMES)
     use_frame[0] = 1
 
-    use_frame = tf.train.input_producer(
-        tf.reshape(tf.convert_to_tensor(use_frame, dtype=tf.float32), shape=[NUM_FRAMES, 1]),
-        shape=[NUM_FRAMES, 1],
+    use_frame_queue = tf.train.input_producer(
+        [tf.reshape(tf.convert_to_tensor(use_frame, dtype=tf.float32), shape=[NUM_FRAMES, 1])],
+        element_shape=[NUM_FRAMES, 1],
         shuffle=False)
-    final_endeffector_pos = tf.train.input_producer(
-        tf.reshape(tf.tile(tf.slice(endeffector_pos, [-1, 0], [1, 3]), [NUM_FRAMES, 1]), shape=[NUM_FRAMES, STATE_DIM]),
-        shape=[NUM_FRAMES, STATE_DIM],
-        shuffle=False)
+    # final_endeffector_pos_queue = tf.train.input_producer(
+    #     [tf.reshape(tf.tile(tf.slice(endeffector_pos, [-1, 0], [1, 3]), [NUM_FRAMES, 1]), shape=[NUM_FRAMES, STATE_DIM])],
+    #     element_shape=[NUM_FRAMES, STATE_DIM],
+    #     shuffle=False)
+    use_frame = use_frame_queue.dequeue()
+    # final_endeffector_pos = final_endeffector_pos_queue.dequeue()
 
     # Reshape image data into original video
     image = tf.reshape(image, [NUM_FRAMES, IMG_HEIGHT, IMG_WIDTH, COLOR_CHANNELS])
 
     # Creates batches by randomly shuffling tensors. each training example is (image,velocity) pair
-    images, angles, velocities, endeffector_poses, use_frames, final_endeffector_poses = \
-        tf.train.shuffle_batch([image, angle, velocity, endeffector_pos, use_frame, final_endeffector_pos],
+    images, angles, velocities, endeffector_poses, use_frames = \
+        tf.train.shuffle_batch([image, angle, velocity, endeffector_pos, use_frame],
                                batch_size=30, capacity=3000, num_threads=30,
                                min_after_dequeue=900, enqueue_many=True)
-    return images, angles, velocities, endeffector_poses, use_frames, final_endeffector_poses
+    return images, angles, velocities, endeffector_poses, use_frames # , final_endeffector_poses
 
 
 def main():
