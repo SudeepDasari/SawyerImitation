@@ -37,9 +37,9 @@ class Model:
         self.m.build()
 
         action_loss = mean_squared_error(self.m.actions, self.m.predicted_actions)
-        # eep_loss = mean_squared_error(np.multiply(use_frames_batch, final_endeffector_poses_batch),
-        #                               np.multiply(use_frames_batch, self.m.predicted_eeps))
-        loss = action_loss # + eep_loss
+        eep_loss = mean_squared_error(np.multiply(use_frames_batch, final_endeffector_poses_batch),
+                                      np.multiply(use_frames_batch, self.m.predicted_eeps))
+        loss = action_loss + eep_loss
         self.loss = loss
         self.lr = 0.001
         self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
@@ -116,7 +116,7 @@ def main():
 
     coord.request_stop()
     coord.join(threads)
-
+    sess.close()
 
 
 if __name__ == '__main__':

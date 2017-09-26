@@ -41,7 +41,7 @@ def read_tf_record(data_path, d_append = 'train'):
     endeffector_pos = tf.reshape(features[d_append+'/endeffector_pos'], shape=[NUM_FRAMES, STATE_DIM])
     final_endeffector_pos = tf.reshape(tf.tile(tf.slice(
         tf.reshape(features[d_append+'/endeffector_pos'], shape=[NUM_FRAMES, STATE_DIM]),
-        [-1, 0], [1, 3]), [NUM_FRAMES, 1]), shape=[NUM_FRAMES, STATE_DIM])
+        [NUM_FRAMES-1, 0], [1, 3]), [NUM_FRAMES, 1]), shape=[NUM_FRAMES, STATE_DIM])
 
     use_frame = np.zeros(NUM_FRAMES)
     use_frame[0] = 1
@@ -50,12 +50,7 @@ def read_tf_record(data_path, d_append = 'train'):
         [tf.reshape(tf.convert_to_tensor(use_frame, dtype=tf.float32), shape=[NUM_FRAMES, 1])],
         element_shape=[NUM_FRAMES, 1],
         shuffle=False)
-    # final_endeffector_pos_queue = tf.train.input_producer(
-    #     [tf.reshape(tf.tile(tf.slice(endeffector_pos, [-1, 0], [1, 3]), [NUM_FRAMES, 1]), shape=[NUM_FRAMES, STATE_DIM])],
-    #     element_shape=[NUM_FRAMES, STATE_DIM],
-    #     shuffle=False)
     use_frame = use_frame_queue.dequeue()
-    # final_endeffector_pos = final_endeffector_pos_queue.dequeue()
 
     # Reshape image data into original video
     image = tf.reshape(image, [NUM_FRAMES, IMG_HEIGHT, IMG_WIDTH, COLOR_CHANNELS])
@@ -76,7 +71,7 @@ def main():
 
     import cv2
         # # Initialize all global and local variables
-    images, angles, velocities, endeffector_poses = read_tf_record(FLAGS.data_path)
+    images, angles, velocities, endeffector_poses, use_frames, final_eeps = read_tf_record(FLAGS.data_path)
 
     with tf.Session(config = tf.ConfigProto(
         device_count = {'GPU': 0}
@@ -92,7 +87,7 @@ def main():
         #
         for batch_index in range(300):
 
-            img, vel, ef, ang = sess.run([images, velocities, endeffector_poses, angles])
+            img, vel, ef, ang, uf, fef = sess.run([images, velocities, endeffector_poses, angles, use_frames, final_eeps])
 
 
             print 'batch_index', batch_index
