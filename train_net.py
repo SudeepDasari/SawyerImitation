@@ -31,7 +31,7 @@ class Model:
                  robot_configs_batch,
                  actions_batch,
                  use_frames_batch,
-                 # final_endeffector_poses_batch,
+                 final_endeffector_poses_batch,
                  training=True):
         self.m = ImitationLearningModel(vgg19_path, images_batch, robot_configs_batch, actions_batch)
         self.m.build()
@@ -57,10 +57,10 @@ def main():
 
     if FLAGS.test:
         images_batch, angles_batch, velocities_batch, endeffector_poses_batch, use_frames_batch, \
-            = read_tf_record(data_path, d_append='test')
+            final_endeffector_poses_batch = read_tf_record(data_path, d_append='test')
     else:
         images_batch, angles_batch, velocities_batch, endeffector_poses_batch, use_frames_batch, \
-            = read_tf_record(data_path)
+            final_endeffector_poses_batch = read_tf_record(data_path)
     if int(tf.__version__[0]) >= 1.0:
         robot_configs_batch = tf.concat([angles_batch, endeffector_poses_batch], 1)
     else:
@@ -69,11 +69,11 @@ def main():
     actions_batch = velocities_batch
 
     if FLAGS.test:
-        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, use_frames_batch, training=False)
-                      # final_endeffector_poses_batch, training=False)
+        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, use_frames_batch,
+                      final_endeffector_poses_batch, training=False)
     else:
-        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, use_frames_batch)
-                      # final_endeffector_poses_batch)
+        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, use_frames_batch,
+                      final_endeffector_poses_batch)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
     # Make training session.

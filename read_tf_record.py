@@ -39,6 +39,9 @@ def read_tf_record(data_path, d_append = 'train'):
     angle = tf.reshape(features[d_append+'/angle'], shape=[NUM_FRAMES, NUM_JOINTS])
     velocity = tf.reshape(features[d_append+'/velocity'], shape=[NUM_FRAMES, NUM_JOINTS])
     endeffector_pos = tf.reshape(features[d_append+'/endeffector_pos'], shape=[NUM_FRAMES, STATE_DIM])
+    final_endeffector_pos = tf.reshape(tf.tile(tf.slice(
+        tf.reshape(features[d_append+'/endeffector_pos'], shape=[NUM_FRAMES, STATE_DIM]),
+        [-1, 0], [1, 3]), [NUM_FRAMES, 1]), shape=[NUM_FRAMES, STATE_DIM])
 
     use_frame = np.zeros(NUM_FRAMES)
     use_frame[0] = 1
@@ -58,11 +61,11 @@ def read_tf_record(data_path, d_append = 'train'):
     image = tf.reshape(image, [NUM_FRAMES, IMG_HEIGHT, IMG_WIDTH, COLOR_CHANNELS])
 
     # Creates batches by randomly shuffling tensors. each training example is (image,velocity) pair
-    images, angles, velocities, endeffector_poses, use_frames = \
-        tf.train.shuffle_batch([image, angle, velocity, endeffector_pos, use_frame],
+    images, angles, velocities, endeffector_poses, use_frames, final_endeffector_poses = \
+        tf.train.shuffle_batch([image, angle, velocity, endeffector_pos, use_frame, final_endeffector_pos],
                                batch_size=30, capacity=3000, num_threads=30,
                                min_after_dequeue=900, enqueue_many=True)
-    return images, angles, velocities, endeffector_poses, use_frames # , final_endeffector_poses
+    return images, angles, velocities, endeffector_poses, use_frames, final_endeffector_poses
 
 
 def main():
