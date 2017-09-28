@@ -37,7 +37,8 @@ class Model:
         action_loss = mean_squared_error(self.m.actions, self.m.predicted_actions)
         eep_loss = mean_squared_error(tf.multiply(use_frames_batch, final_endeffector_poses_batch),
                                       tf.multiply(use_frames_batch, self.m.predicted_eeps))
-        loss = action_loss # + eep_loss
+        self.eep_multiplier = 0.1
+        loss = action_loss + self.eep_multiplier * eep_loss
         self.loss = loss
         self.lr = 0.001
         self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
