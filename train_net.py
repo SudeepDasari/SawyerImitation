@@ -37,12 +37,14 @@ class Model:
         action_loss = mean_squared_error(self.m.actions, self.m.predicted_actions)
         eep_loss = mean_squared_error(tf.multiply(use_frames_batch, final_endeffector_poses_batch),
                                       tf.multiply(use_frames_batch, self.m.predicted_eeps))
-        self.eep_multiplier = 0.1
+        self.eep_multiplier = 0.01
         loss = action_loss + self.eep_multiplier * eep_loss
         self.loss = loss
         self.lr = 0.001
         self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
-        self.summ_op = tf.summary.merge([tf.summary.scalar('loss', loss)])
+        self.summ_op = tf.summary.merge([tf.summary.scalar('loss', loss),
+                                         tf.summary('eep_loss', eep_loss),
+                                         tf.summary('action_loss', action_loss)])
 
 
 
@@ -52,7 +54,7 @@ def main():
     data_path = FLAGS.data_path
     output_dir = FLAGS.model_path
 
-    NUM_ITERS = 36000
+    NUM_ITERS = 10000
 
     with tf.variable_scope('model', reuse=None) as training_scope:
         images_batch, angles_batch, actions_batch, endeffector_poses_batch, use_frames_batch, \
