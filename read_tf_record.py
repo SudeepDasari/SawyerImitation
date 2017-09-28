@@ -95,11 +95,8 @@ def main():
 
 
             print 'batch_index', batch_index
-            print 'vel', vel.shape
-            print 'ef', ef.shape
-            print 'ang', ang.sum()
-            print 'fef', fef
-            print 'uf', uf
+            print 'vel', np.min(vel), np.max(vel)
+            print 'ef', np.min(ef), np.max(ef)
 
             # for i in range(15):
             #     cv2.imshow('img', img[i])
