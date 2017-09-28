@@ -64,11 +64,11 @@ class ImitationLearningModel:
 
             layer6 = slim.layers.fully_connected(layer5, 100, scope='fc3')
 
-            shifted_sigmoid = lambda x: 2 * tf.sigmoid(x) - 1
+            # shifted_sigmoid = lambda x: 2 * tf.sigmoid(x) - 1
 
-            fc_actions = slim.layers.fully_connected(layer6, 7, scope='fc4_1', activation_fn=shifted_sigmoid)  # dim of velocities: 7
+            fc_actions = slim.layers.fully_connected(layer6, 7, scope='fc4_1', activation_fn=None)  # dim of velocities: 7
 
-            fc_eeps = slim.layers.fully_connected(layer6, 3, scope='fc4_2', activation_fn=shifted_sigmoid)  # dim of eeps: 3
+            fc_eeps = slim.layers.fully_connected(layer6, 3, scope='fc4_2', activation_fn=None)  # dim of eeps: 3
 
             self.predicted_actions, self.predicted_eeps = fc_actions, fc_eeps
 
