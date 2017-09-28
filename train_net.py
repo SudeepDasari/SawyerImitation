@@ -4,13 +4,6 @@ from imitation_learning import ImitationLearningModel
 from read_tf_record import read_tf_record
 from tensorflow.python.platform import flags
 
-
-
-FLAGS = flags.FLAGS
-flags.DEFINE_string('vgg19_path', './', 'path to npy file')
-flags.DEFINE_string('data_path', './', 'path to tfrecords file')
-flags.DEFINE_string('model_path', './', 'path to output model/stats')
-
 def mean_squared_error(true, pred):
     """L2 distance between tensors true and pred.
 
@@ -42,9 +35,9 @@ class Model:
                 self.m.build()
 
         action_loss = mean_squared_error(self.m.actions, self.m.predicted_actions)
-        eep_loss = mean_squared_error(np.multiply(use_frames_batch, final_endeffector_poses_batch),
-                                      np.multiply(use_frames_batch, self.m.predicted_eeps))
-        loss = action_loss + eep_loss
+        eep_loss = mean_squared_error(tf.multiply(use_frames_batch, final_endeffector_poses_batch),
+                                      tf.multiply(use_frames_batch, self.m.predicted_eeps))
+        loss = action_loss # + eep_loss
         self.loss = loss
         self.lr = 0.001
         self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
@@ -120,4 +113,8 @@ def main():
 
 
 if __name__ == '__main__':
+    FLAGS = flags.FLAGS
+    flags.DEFINE_string('vgg19_path', './', 'path to npy file')
+    flags.DEFINE_string('data_path', './', 'path to tfrecords file')
+    flags.DEFINE_string('model_path', './', 'path to output model/stats')
     main()

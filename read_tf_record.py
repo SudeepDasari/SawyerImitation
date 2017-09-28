@@ -10,7 +10,7 @@ IMG_HEIGHT = 224
 COLOR_CHANNELS = 3
 
 
-def read_tf_record(data_path, d_append='train'):
+def read_tf_record(data_path, d_append='train', shuffle = True):
     #gets data path
     # data_path = FLAGS.data_path
 
@@ -55,10 +55,15 @@ def read_tf_record(data_path, d_append='train'):
     image = tf.reshape(image, [NUM_FRAMES, IMG_HEIGHT, IMG_WIDTH, COLOR_CHANNELS])
 
     # Creates batches by randomly shuffling tensors. each training example is (image,velocity) pair
-    images, angles, velocities, endeffector_poses, use_frames, final_endeffector_poses = \
-        tf.train.shuffle_batch([image, angle, velocity, endeffector_pos, use_frame, final_endeffector_pos],
-                               batch_size=30, capacity=3000, num_threads=30,
-                               min_after_dequeue=900, enqueue_many=True)
+    if shuffle:
+        images, angles, velocities, endeffector_poses, use_frames, final_endeffector_poses = \
+            tf.train.shuffle_batch([image, angle, velocity, endeffector_pos, use_frame, final_endeffector_pos],
+                                   batch_size=30, capacity=3000, num_threads=30,
+                                   min_after_dequeue=900, enqueue_many=True)
+    else:
+        images, angles, velocities, endeffector_poses, use_frames, final_endeffector_poses = \
+            tf.train.batch([image, angle, velocity, endeffector_pos, use_frame, final_endeffector_pos],
+                                   batch_size=30, capacity=3000, num_threads=30, enqueue_many=True)
     return images, angles, velocities, endeffector_poses, use_frames, final_endeffector_poses
 
 
@@ -70,7 +75,7 @@ def main():
 
     import cv2
         # # Initialize all global and local variables
-    images, angles, velocities, endeffector_poses, use_frames, final_eeps = read_tf_record(FLAGS.data_path)
+    images, angles, velocities, endeffector_poses, use_frames, final_eeps = read_tf_record(FLAGS.data_path, shuffle=False)
 
     with tf.Session(config = tf.ConfigProto(
         device_count = {'GPU': 0}
@@ -93,7 +98,8 @@ def main():
             print 'vel', vel.shape
             print 'ef', ef.shape
             print 'ang', ang.sum()
-            print 'fef', fef.shape
+            print 'fef', fef
+            print 'uf', uf
 
             # for i in range(15):
             #     cv2.imshow('img', img[i])
