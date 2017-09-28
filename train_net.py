@@ -43,8 +43,8 @@ class Model:
         self.lr = 0.001
         self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
         self.summ_op = tf.summary.merge([tf.summary.scalar('loss', loss),
-                                         tf.summary('eep_loss', eep_loss),
-                                         tf.summary('action_loss', action_loss)])
+                                         tf.summary.scalar('eep_loss', eep_loss),
+                                         tf.summary.scalar('action_loss', action_loss)])
 
 
 
