@@ -37,14 +37,18 @@ class Model:
         action_loss = mean_squared_error(self.m.actions, self.m.predicted_actions)
         eep_loss = mean_squared_error(tf.multiply(use_frames_batch, final_endeffector_poses_batch),
                                       tf.multiply(use_frames_batch, self.m.predicted_eeps))
+        if eep_loss > 0:
+            eep_loss /= np.count_nonzero(use_frames_batch)
         self.eep_multiplier = 0.01
         loss = action_loss + self.eep_multiplier * eep_loss
+        self.eep_loss = eep_loss / np.count_nonzero(use_frames_batch)
+        self.action_loss = action_loss
         self.loss = loss
         self.lr = 0.001
         self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
-        self.summ_op = tf.summary.merge([tf.summary.scalar('loss', loss),
-                                         tf.summary.scalar('eep_loss', eep_loss),
-                                         tf.summary.scalar('action_loss', action_loss)])
+        # self.summ_op = tf.summary.merge([tf.summary.scalar('loss', loss),
+        #                                  tf.summary.scalar('eep_loss', eep_loss),
+        #                                  tf.summary.scalar('action_loss', action_loss)])
 
 
 
@@ -90,21 +94,41 @@ def main():
         if itr % 180 == 0:
             print 'Running Validation'
             val_loss = 0
+            action_loss = 0
+            eep_loss = 0
+            count_first = 0
             for t_itr in range(30):
-                val_loss += sess.run([val_model.loss])[0] / 30.0
+                curr_val_loss, curr_action_loss, curr_eep_loss = sess.run([val_model.loss,
+                                                                           val_model.action_loss,
+                                                                           val_model.eep_loss])
+                val_loss += curr_val_loss / 30.0
+                action_loss += curr_action_loss / 30.0
+                if curr_eep_loss > 0:
+                    eep_loss += curr_eep_loss
+                    count_first += 1
 
             val_summary = tf.Summary()
-            val_summary.value.add(tag="val_model/val_loss", simple_value=val_loss)
+            val_summary.value.add(tag="val_model/loss", simple_value=val_loss)
+            val_summary.value.add(tag="val_model/action_loss", simple_value=action_loss)
+            if eep_loss > 0:
+                eep_loss /= count_first
+                val_summary.value.add(tag="val_model/eep_loss", simple_value=eep_loss)
 
             summary_writer.add_summary(val_summary, itr)
             print 'Validation Loss:', val_loss
 
-        cost, _, summary_str = sess.run([model.loss, model.train_op, model.summ_op])
+        train_loss, action_loss, eep_loss, _ = sess.run([model.loss, model.action_loss, model.eep_loss, model.train_op])
                                             #feed_dict)
+        summary_str = tf.Summary()
+        summary_str.value.add(tag="train_model/loss", simple_value=train_loss)
+        summary_str.value.add(tag="train_model/action_loss", simple_value=action_loss)
+        if eep_loss > 0:
+            summary_str.value.add(tag="train_model/eep_loss", simple_value=eep_loss)
+
         if itr % 10 == 0:
             summary_writer.add_summary(summary_str, itr)
         if itr % 100 == 0:
-            print 'Cost', cost, 'On iter', itr
+            print 'Cost', train_loss, 'On iter', itr
         if itr % 180 == 0 and itr > 0:
             saver.save(sess, output_dir + '/model'+ str(itr))
 
