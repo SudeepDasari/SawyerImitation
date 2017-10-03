@@ -34,7 +34,7 @@ class RobotController(object):
     def set_joint_delta(self, joint_name, delta):
         """Move a single joint by a delta"""
         current_position = self.limb.joint_angle(joint_name)
-        self.set_joint(joint_name, current_position + delta)
+        self.set_joint_position(joint_name, current_position + delta)
 
     def set_joint_position(self, joint_name, pos):
         """Move a single joint to a target position"""
@@ -59,11 +59,14 @@ class RobotController(object):
         done = False
         while not done:
             try:
-                self.set_joints(cmd)
+                self.set_joint_positions(cmd)
             except:
                 print 'retrying set neutral...'
 
             done = True
+
+    def get_joint_angles(self):
+        return [self.limb.joint_angle(j) for j in self.limb.joint_names()]
 
     def clean_shutdown(self):
         print("\nExiting example.")

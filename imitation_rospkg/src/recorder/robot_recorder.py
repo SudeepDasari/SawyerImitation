@@ -15,6 +15,11 @@ from berkeley_sawyer.srv import *
 from PIL import Image
 import cPickle
 import imageio
+from sensor_msgs.msg import JointState
+from intera_core_msgs.srv import (
+    SolvePositionFK,
+    SolvePositionFKRequest,
+)
 
 import argparse
 
@@ -89,6 +94,9 @@ class RobotRecorder(object):
 
         rospy.Subscriber(prefix + "/kinect2/hd/image_color", Image_msg, self.store_latest_im)
         rospy.Subscriber(prefix + "/kinect2/sd/image_depth_rect", Image_msg, self.store_latest_d_im)
+
+        self.name_of_service = "ExternalTools/right/PositionKinematicsNode/FKService"
+        self.fksvc = rospy.ServiceProxy(self.name_of_service, SolvePositionFK)
 
         self.save_dir = save_dir
         self.ltob = Latest_observation()
@@ -413,6 +421,28 @@ class RobotRecorder(object):
                 if pref == 'aux1':
                     dict['t_get_request'] = self.t_get_request
                 cPickle.dump(dict, f)
+
+    def get_endeffector_pos(self):
+        fkreq = SolvePositionFKRequest()
+        joints = JointState()
+        joints.name = self.limb.joint_names()
+        joints.position = [self.limb.joint_angle(j)
+                           for j in joints.name]
+
+        # Add desired pose for forward kinematics
+        fkreq.configuration.append(joints)
+        fkreq.tip_names.append('right_hand')
+        try:
+            rospy.wait_for_service(self.name_of_service, 5)
+            resp = self.fksvc(fkreq)
+        except (rospy.ServiceException, rospy.ROSException), e:
+            rospy.logerr("Service call failed: %s" % (e,))
+            return False
+
+        pos = np.array([resp.pose_stamp[0].pose.position.x,
+                        resp.pose_stamp[0].pose.position.y,
+                        resp.pose_stamp[0].pose.position.z])
+        return pos
 
 
 if __name__ ==  '__main__':
