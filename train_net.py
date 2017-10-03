@@ -37,11 +37,12 @@ class Model:
         action_loss = mean_squared_error(self.m.actions, self.m.predicted_actions)
         eep_loss = mean_squared_error(tf.multiply(use_frames_batch, final_endeffector_poses_batch),
                                       tf.multiply(use_frames_batch, self.m.predicted_eeps))
-        if eep_loss > 0:
-            eep_loss /= np.count_nonzero(use_frames_batch)
+        eep_loss = tf.cond(eep_loss > 0,
+                           lambda: tf.divide(eep_loss, tf.cast(tf.count_nonzero(use_frames_batch), tf.float32)),
+                           lambda: eep_loss)
         self.eep_multiplier = 0.01
         loss = action_loss + self.eep_multiplier * eep_loss
-        self.eep_loss = eep_loss / np.count_nonzero(use_frames_batch)
+        self.eep_loss = eep_loss
         self.action_loss = action_loss
         self.loss = loss
         self.lr = 0.001
