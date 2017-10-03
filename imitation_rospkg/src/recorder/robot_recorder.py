@@ -425,8 +425,8 @@ class RobotRecorder(object):
     def get_endeffector_pos(self):
         fkreq = SolvePositionFKRequest()
         joints = JointState()
-        joints.name = self.limb.joint_names()
-        joints.position = [self.limb.joint_angle(j)
+        joints.name = self._limb_right.joint_names()
+        joints.position = [self._limb_right.joint_angle(j)
                            for j in joints.name]
 
         # Add desired pose for forward kinematics
