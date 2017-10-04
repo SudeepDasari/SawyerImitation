@@ -65,9 +65,6 @@ class RobotController(object):
 
             done = True
 
-    def get_joint_angles(self):
-        return [self.limb.joint_angle(j) for j in self.limb.joint_names()]
-
     def clean_shutdown(self):
         print("\nExiting example.")
         # if not init_state:

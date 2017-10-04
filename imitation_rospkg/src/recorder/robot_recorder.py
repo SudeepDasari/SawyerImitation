@@ -444,6 +444,8 @@ class RobotRecorder(object):
                         resp.pose_stamp[0].pose.position.z])
         return pos
 
+    def get_joint_angles(self):
+        return [self._limb_right.joint_angle(j) for j in self._limb_right.joint_names()]
 
 if __name__ ==  '__main__':
     print 'started'
