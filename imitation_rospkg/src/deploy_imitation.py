@@ -24,7 +24,7 @@ class SawyerImitation(object):
         parser.add_argument('--save_dir', default='./', type=str, help='')
 
         print("Initializing node... ")
-        rospy.init_node("sawyer_imitation_client")
+        rospy.init_node("sawyer_imitation")
 
         self.rs = intera_interface.RobotEnable(CHECK_VERSION)
         self.init_state = self.rs.state().enabled
@@ -47,11 +47,6 @@ class SawyerImitation(object):
         self.action_rate = rospy.Rate(self.action_interval)
         self.control_rate = rospy.Rate(20)
         self.predictor = setup_predictor(model_path, vgg19_path)
-
-        # self.imp_ctrl_publisher = rospy.Publisher('desired_joint_pos', JointState, queue_size=1)
-        # self.imp_ctrl_release_spring_pub = rospy.Publisher('release_spring', Float32, queue_size=10)
-        # self.imp_ctrl_active = rospy.Publisher('imp_ctrl_active', Int64, queue_size=10)
-        # self.imp_ctrl_active.publish(0)
 
         rospy.on_shutdown(self.ctrl.clean_shutdown)
 
