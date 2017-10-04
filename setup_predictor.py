@@ -6,8 +6,8 @@ import os
 
 
 def setup_predictor(model_path, vgg19_path):
-    images_pl = tf.placeholder(tf.float32, name='images', shape=(32, 64, 64, 3))
-    configs_pl = tf.placeholder(tf.float32, name='configs', shape=(32, 10))
+    images_pl = tf.placeholder(tf.float32, name='images', shape=(1, 64, 64, 3))
+    configs_pl = tf.placeholder(tf.float32, name='configs', shape=(1, 10))
 
     with tf.variable_scope('model', reuse=None):
         model = ImitationLearningModel(vgg19_path, images_pl, configs_pl)
@@ -25,9 +25,12 @@ def setup_predictor(model_path, vgg19_path):
     saver.restore(sess, model_path)
 
     def predictor_func(images=None, robot_configs=None):
+        feed_image = images.astype(np.float32).reshape((1, 64, 64, 3))
+        feed_config = robot_configs.astype(np.float32).reshape((1, 10))
+
         feed_dict = {
-            images_pl: images,
-            configs_pl: robot_configs,
+            images_pl: feed_image,
+            configs_pl: feed_config,
         }
         predicted_actions, predicted_eeps = sess.run([model.predicted_actions, model.predicted_eeps], feed_dict)
         return predicted_actions[0], predicted_eeps[0]

@@ -9,7 +9,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from intera_interface import CHECK_VERSION
 import intera_interface
 from berkeley_sawyer.srv import *
-import flags
+from tensorflow.python.platform import flags
 
 from robot_controller import RobotController
 from recorder.robot_recorder import RobotRecorder
@@ -53,16 +53,10 @@ class SawyerImitation(object):
         self.ctrl.set_neutral()
 
     def query_action(self):
-        image = self.recorder.bridge.cv2_to_imgmsg(self.recorder.ltob.img_cropped)
+        image = self.recorder.ltob.img_cropped
         robot_configs = np.concatenate((self.recorder.get_endeffector_pos(), self.recorder.get_joint_angles()))
 
-        try:
-            rospy.wait_for_service('get_action', timeout=240)
-            action_vec, _ = self.predictor(image, robot_configs)
-
-        except (rospy.ServiceException, rospy.ROSException), e:
-            rospy.logerr("Service call failed: %s" % (e,))
-            raise ValueError('get action service call failed')
+        action_vec, predicted_eep = self.predictor(image, robot_configs)
         return action_vec
 
     def apply_action(self, action):
@@ -91,5 +85,6 @@ if __name__ == '__main__':
     FLAGS = flags.FLAGS
     flags.DEFINE_string('model_path', './', 'path to output model/stats')
     flags.DEFINE_string('vgg19_path', './', 'path to npy file')
-    d = SawyerImitation(flags.model_path, flags.vgg19_path)
+    d = SawyerImitation(FLAGS.model_path, FLAGS.vgg19_path)
+    input('Please press enter.....')
     d.run_trajectory()
