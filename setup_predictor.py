@@ -4,7 +4,7 @@ from imitation_learning import ImitationLearningModel
 
 
 def setup_predictor(model_path, vgg19_path):
-    images_pl = tf.placeholder(tf.uint8, name='images', shape=(1, 64, 64, 3))
+    images_pl = tf.placeholder(tf.uint8, name='images', shape=(1, 224, 224, 3))
     configs_pl = tf.placeholder(tf.float32, name='configs', shape=(1, 10))
 
     with tf.variable_scope('model', reuse=None):

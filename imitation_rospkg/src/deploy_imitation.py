@@ -33,7 +33,7 @@ class SawyerImitation(object):
                                       save_images=False)
 
         self.action_interval = 20 #Hz
-        self.action_sequence_length = 60
+        self.action_sequence_length = 20
         self.traj_duration = self.action_sequence_length * self.action_interval
         self.action_rate = rospy.Rate(self.action_interval)
         self.control_rate = rospy.Rate(20)
