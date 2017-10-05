@@ -1,4 +1,3 @@
-from train_net import Model
 import tensorflow as tf
 import numpy as np
 import argparse
