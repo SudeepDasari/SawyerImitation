@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import tensorflow as tf
 import numpy as np
 import argparse
 import rospy
@@ -8,6 +9,7 @@ import intera_interface
 from berkeley_sawyer.srv import *
 from tensorflow.python.platform import flags
 import matplotlib.pyplot as plt
+import pdb
 
 from robot_controller import RobotController
 from recorder.robot_recorder import RobotRecorder
@@ -16,9 +18,7 @@ import cv2
 
 class SawyerImitation(object):
     def __init__(self, model_path, vgg19_path):
-
         self.ctrl = RobotController()
-
 
         self.recorder = RobotRecorder(save_dir='',
                                       seq_len=60,
@@ -29,6 +29,7 @@ class SawyerImitation(object):
 
         self.action_interval = 20 #Hz
         self.action_sequence_length = 15
+
         self.traj_duration = self.action_sequence_length * self.action_interval
         self.action_rate = rospy.Rate(self.action_interval)
         self.control_rate = rospy.Rate(20)
@@ -37,23 +38,20 @@ class SawyerImitation(object):
         self.ctrl.set_neutral()
 
     def query_action(self):
-        image = self.recorder.ltob.img_cropped
-        cv2.imwrite('test' + str(self.save_ctr)+'.png', image)
-        self.save_ctr += 1
-        # cv2.imshow('image', image)
-        # cv2.waitKey(0)
-        robot_configs = np.concatenate((self.recorder.get_endeffector_pos(), self.recorder.get_joint_angles()))
+        image = cv2.resize(self.recorder.ltob.img_cv2, (224, 224), interpolation=cv2.INTER_AREA)
+        robot_configs = np.concatenate((self.recorder.get_joint_angles(), self.recorder.get_endeffector_pos()))
 
         if image is None or robot_configs is None:
             return None
 
-        # print 'prediction', image.shape, robot_configs.shape
-        action_vec, predicted_eep = self.predictor(image, robot_configs)
-        return action_vec, predicted_eep
+        action, predicted_eep = self.predictor(image, robot_configs)
+        print 'action vector: ', action
+        print 'predicted end effector pose: ', predicted_eep
+        return action
 
     def apply_action(self, action):
         try:
-             self.ctrl.set_joint_velocities(action)
+            self.ctrl.set_joint_velocities(action)
 
         except OSError:
             rospy.logerr('collision detected, stopping trajectory, going to reset robot...')
@@ -71,7 +69,6 @@ class SawyerImitation(object):
         while step < self.action_sequence_length:
             self.control_rate.sleep()
             action, predicted_eep = self.query_action()
-            print 'predicted_eep', predicted_eep
 
             action_dict = {}
             for i in range(len(self.ctrl.joint_names)):
