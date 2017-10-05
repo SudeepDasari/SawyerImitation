@@ -27,6 +27,7 @@ class RobotController(object):
         print("Robot enabled...")
 
         self.limb = intera_interface.Limb("right")
+        self.limb.set_command_timeout(1 / 20.)
 
         self.joint_names = self.limb.joint_names()
         print("Done initializing controller.")

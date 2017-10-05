@@ -14,7 +14,7 @@ def setup_predictor(model_path, vgg19_path):
         model = ImitationLearningModel(vgg19_path, images_pl, configs_pl)
         model.build()
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
 
     vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
     saver = tf.train.Saver(vars, max_to_keep=0)

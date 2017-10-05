@@ -70,7 +70,7 @@ def main():
     reals = []
     predictions = []
     for i in range(20):
-        real_actions, predicted_actions, loss, summary_str = sess.run([val_model.m.actions, val_model.m.predicted_actions, val_model.loss, val_model.summ_op])
+        real_actions, predicted_actions, loss = sess.run([val_model.m.actions, val_model.m.predicted_actions, val_model.loss])
         print 'loss is', loss
 
         reals.append(real_actions)
