@@ -47,12 +47,14 @@ class SawyerImitation(object):
         image = cv2.resize(self.recorder.ltob.img_cropped, (224, 224), interpolation=cv2.INTER_AREA)
         robot_configs = np.concatenate((self.recorder.get_joint_angles(), self.recorder.get_endeffector_pos()))
 
-        action_vec, predicted_eep = self.predictor(image, robot_configs)
-        return action_vec
+        action, predicted_eep = self.predictor(image, robot_configs)
+        print 'action vector: ', action
+        print 'predicted end effector pose: ', predicted_eep
+        return action
 
     def apply_action(self, action):
         try:
-             self.ctrl.set_joint_velocities(action)
+            self.ctrl.set_joint_velocities(action)
         except OSError:
             rospy.logerr('collision detected, stopping trajectory, going to reset robot...')
             rospy.sleep(.5)
@@ -66,7 +68,6 @@ class SawyerImitation(object):
         step = 0
         while step < self.action_sequence_length:
             action = self.query_action()
-            print 'action vector: ', action
 
             # self.apply_action(action)
 
