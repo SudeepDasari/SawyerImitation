@@ -24,7 +24,7 @@ class Model:
                  actions_batch,
                  use_frames_batch,
                  final_endeffector_poses_batch,
-                 reuse_train_scope = None):
+                 reuse_train_scope=None):
 
         if reuse_train_scope is None:
             self.m = ImitationLearningModel(vgg19_path, images_batch, robot_configs_batch, actions_batch)

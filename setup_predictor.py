@@ -1,8 +1,6 @@
 import tensorflow as tf
-import imp
 import numpy as np
 from imitation_learning import ImitationLearningModel
-import os
 
 
 def setup_predictor(model_path, vgg19_path):
@@ -25,7 +23,7 @@ def setup_predictor(model_path, vgg19_path):
     saver.restore(sess, model_path)
 
     def predictor_func(images=None, robot_configs=None):
-        feed_image = images.astype(np.uint8).reshape((1, 64, 64, 3))
+        feed_image = images.astype(np.uint8).reshape((1, 224, 224, 3))
         feed_config = robot_configs.astype(np.float32).reshape((1, 10))
 
         feed_dict = {

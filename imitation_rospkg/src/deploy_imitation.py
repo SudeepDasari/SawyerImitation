@@ -43,8 +43,8 @@ class SawyerImitation(object):
         self.ctrl.set_neutral()
 
     def query_action(self):
-        image = self.recorder.ltob.img_cropped
-        robot_configs = np.concatenate((self.recorder.get_endeffector_pos(), self.recorder.get_joint_angles()))
+        image = cv2.resize(self.recorder.ltob.img_cropped, (224, 224), interpolation=cv2.INTER_AREA)
+        robot_configs = np.concatenate((self.recorder.get_joint_angles(), self.recorder.get_endeffector_pos()))
 
         action_vec, predicted_eep = self.predictor(image, robot_configs)
         return action_vec

@@ -55,12 +55,12 @@ class ImitationLearningModel:
             fp_flat = tf.reshape(tf.concat([fp_x, fp_y], 1), [-1, num_fp * 2])
 
             conv_out = tf.concat([fp_flat,
-                                  tf.reshape(self.robot_configs, [fp_flat.shape[0], 10])],  # dim of angles: 7, dim of eeps: 3
+                                  tf.reshape(self.robot_configs, [fp_flat.shape.as_list()[0], 10])],  # dim of angles: 7, dim of eeps: 3
                                  1)
 
-            layer4 = slim.layers.fully_connected(conv_out, 75, scope='fc1')
+            layer4 = slim.layers.fully_connected(conv_out, 100, scope='fc1')
 
-            layer5 = slim.layers.fully_connected(layer4, 75, scope='fc2')
+            layer5 = slim.layers.fully_connected(layer4, 100, scope='fc2')
 
             # layer6 = slim.layers.fully_connected(layer5, 100, scope='fc3')
 

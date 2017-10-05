@@ -14,7 +14,7 @@ flags.DEFINE_string('out_path', './', 'output file directory')
 
 def load_image(path):
     img = cv2.imread(path)
-    img =  cv2.resize(img, (224, 224), interpolation=cv2.INTER_AREA)
+    img = cv2.resize(img, (224, 224), interpolation=cv2.INTER_AREA)
     return img
 
 
