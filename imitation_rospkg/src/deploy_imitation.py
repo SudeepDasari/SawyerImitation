@@ -19,20 +19,10 @@ from setup_predictor import setup_predictor
 class SawyerImitation(object):
     def __init__(self, model_path, vgg19_path):
 
-        parser = argparse.ArgumentParser()
-        self.args = parser.parse_args()
-        parser.add_argument('--save_dir', default='./', type=str, help='')
-
         print("Initializing node... ")
         rospy.init_node("sawyer_imitation")
 
-        self.rs = intera_interface.RobotEnable(CHECK_VERSION)
-        self.init_state = self.rs.state().enabled
-
         self.ctrl = RobotController()
-
-        self.limb = intera_interface.Limb("right")
-        self.joint_names = self.limb.joint_names()
 
         self.recorder = RobotRecorder(save_dir=self.args.save_dir,
                                       seq_len=60,
