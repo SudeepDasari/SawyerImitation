@@ -10,6 +10,7 @@ from intera_interface import CHECK_VERSION
 import intera_interface
 from berkeley_sawyer.srv import *
 from tensorflow.python.platform import flags
+import pdb
 
 from robot_controller import RobotController
 from recorder.robot_recorder import RobotRecorder
@@ -24,7 +25,7 @@ class SawyerImitation(object):
 
         self.ctrl = RobotController()
 
-        self.recorder = RobotRecorder(save_dir=self.args.save_dir,
+        self.recorder = RobotRecorder(save_dir='',
                                       seq_len=60,
                                       use_aux=False,
                                       save_video=True,
@@ -76,5 +77,5 @@ if __name__ == '__main__':
     flags.DEFINE_string('model_path', './', 'path to output model/stats')
     flags.DEFINE_string('vgg19_path', './', 'path to npy file')
     d = SawyerImitation(FLAGS.model_path, FLAGS.vgg19_path)
-    input('Please press enter.....')
+    pdb.set_trace()
     d.run_trajectory()
