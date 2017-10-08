@@ -18,7 +18,7 @@ def l2_loss(true, pred):
 
 
 def l1_loss(true, pred):
-    return tf.abs(tf.reduce_sum(true - pred))
+    return tf.reduce_sum(tf.abs(true - pred))
 
 
 class Model:
@@ -66,7 +66,7 @@ def main():
     data_path = FLAGS.data_path
     output_dir = FLAGS.model_path
 
-    NUM_ITERS = 10000
+    NUM_ITERS = 6000
 
     with tf.variable_scope('model', reuse=None) as training_scope:
         images_batch, angles_batch, actions_batch, endeffector_poses_batch, use_frames_batch, \
