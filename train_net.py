@@ -4,7 +4,8 @@ from imitation_learning import ImitationLearningModel
 from read_tf_record import read_tf_record
 from tensorflow.python.platform import flags
 
-def mean_squared_error(true, pred):
+
+def l2_loss(true, pred):
     """L2 distance between tensors true and pred.
 
     Args:
@@ -14,6 +15,10 @@ def mean_squared_error(true, pred):
       mean squared error between ground truth and predicted image.
     """
     return tf.reduce_sum(tf.square(true - pred)) / tf.to_float(tf.size(pred))
+
+
+def l1_loss(true, pred):
+    return tf.abs(tf.reduce_sum(true - pred))
 
 
 class Model:
@@ -34,9 +39,11 @@ class Model:
                 self.m = ImitationLearningModel(vgg19_path, images_batch, robot_configs_batch, actions_batch)
                 self.m.build()
 
-        action_loss = mean_squared_error(self.m.actions, self.m.predicted_actions)
-        eep_loss = mean_squared_error(tf.multiply(use_frames_batch, final_endeffector_poses_batch),
-                                      tf.multiply(use_frames_batch, self.m.predicted_eeps))
+        action_loss = l2_loss(self.m.actions, self.m.predicted_actions)
+        eep_loss = l2_loss(tf.multiply(use_frames_batch, final_endeffector_poses_batch),
+                           tf.multiply(use_frames_batch, self.m.predicted_eeps)) + \
+                   l1_loss(tf.multiply(use_frames_batch, final_endeffector_poses_batch),
+                           tf.multiply(use_frames_batch, self.m.predicted_eeps))
         eep_loss = tf.cond(eep_loss > 0,
                            lambda: tf.divide(eep_loss, tf.cast(tf.count_nonzero(use_frames_batch), tf.float32)),
                            lambda: eep_loss)
