@@ -39,10 +39,8 @@ class Model:
                 self.m = ImitationLearningModel(vgg19_path, images_batch, robot_configs_batch, actions_batch)
                 self.m.build()
 
-        action_loss = l2_loss(self.m.actions, self.m.predicted_actions)
+        action_loss = l1_loss(self.m.actions, self.m.predicted_actions) + 0.01 * l2_loss(self.m.actions, self.m.predicted_actions)
         eep_loss = l2_loss(tf.multiply(use_frames_batch, final_endeffector_poses_batch),
-                           tf.multiply(use_frames_batch, self.m.predicted_eeps)) + \
-                   l1_loss(tf.multiply(use_frames_batch, final_endeffector_poses_batch),
                            tf.multiply(use_frames_batch, self.m.predicted_eeps))
         eep_loss = tf.cond(eep_loss > 0,
                            lambda: tf.divide(eep_loss, tf.cast(tf.count_nonzero(use_frames_batch), tf.float32)),
@@ -54,11 +52,6 @@ class Model:
         self.loss = loss
         self.lr = 0.001
         self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
-        # self.summ_op = tf.summary.merge([tf.summary.scalar('loss', loss),
-        #                                  tf.summary.scalar('eep_loss', eep_loss),
-        #                                  tf.summary.scalar('action_loss', action_loss)])
-
-
 
 
 def main():
