@@ -24,10 +24,10 @@ class ImitationLearningModel:
 
             layer1 = tf_layers.layer_norm(self.vgg_layer(self.images), scope='conv1_norm')
             layer2 = tf_layers.layer_norm(
-                slim.layers.conv2d(layer1, 64, [3, 3], stride=2, scope='conv2'), scope='conv2_norm')
+                slim.layers.conv2d(layer1, 32, [3, 3], stride=2, scope='conv2'), scope='conv2_norm')
 
             layer3 = tf_layers.layer_norm(
-                slim.layers.conv2d(layer2, 64, [3, 3], stride=2, scope='conv3'), scope='conv3_norm')
+                slim.layers.conv2d(layer2, 32, [3, 3], stride=2, scope='conv3'), scope='conv3_norm')
 
             batch_size, num_rows, num_cols, num_fp = layer3.get_shape()
             num_rows, num_cols, num_fp = [int(x) for x in [num_rows, num_cols, num_fp]]
@@ -54,32 +54,26 @@ class ImitationLearningModel:
 
             fp_flat = tf.reshape(tf.concat([fp_x, fp_y], 1), [-1, num_fp * 2])
 
+            predicted_eeps = slim.layers.fully_connected(fp_flat, 3, scope='predicted_eeps', activation_fn=None)  # dim of eeps: 3
+
             conv_out = tf.concat([fp_flat,
-                                  tf.reshape(self.robot_configs, [fp_flat.shape.as_list()[0], 10])],  # dim of angles: 7, dim of eeps: 3
+                                  tf.reshape(self.robot_configs, [fp_flat.shape.as_list()[0], 10]),  # dim of angles: 7, dim of eeps: 3
+                                  predicted_eeps],
                                  1)
 
-            layer4 = slim.layers.fully_connected(conv_out, 100, scope='fc1')
+            fc_layer1 = slim.layers.fully_connected(conv_out, 100, scope='fc1')
 
-            layer5 = slim.layers.fully_connected(layer4, 100, scope='fc2')
+            predicted_actions = slim.layers.fully_connected(fc_layer1, 7, scope='predicted_actions', activation_fn=None)  # dim of velocities: 7
 
-            # layer6 = slim.layers.fully_connected(layer5, 100, scope='fc3')
-
-            # shifted_sigmoid = lambda x: 2 * tf.sigmoid(x) - 1
-
-            fc_actions = slim.layers.fully_connected(layer5, 7, scope='fc4_1', activation_fn=None)  # dim of velocities: 7
-
-            fc_eeps = slim.layers.fully_connected(layer5, 3, scope='fc4_2', activation_fn=None)  # dim of eeps: 3
-
-            self.predicted_actions, self.predicted_eeps = fc_actions, fc_eeps
+            self.predicted_actions, self.predicted_eeps = predicted_actions, predicted_eeps
 
     # Source: https://github.com/machrisaa/tensorflow-vgg/blob/master/vgg19.py
     def vgg_layer(self, images):
-        rgb_scaled = tf.to_float(images) * 255
+        rgb_scaled = tf.to_float(images)
 
         vgg_mean = tf.convert_to_tensor(np.array([103.939, 116.779, 123.68], dtype=np.float32))
 
-        # Convert RGB to BGR
-        red, green, blue = tf.split(axis=3, num_or_size_splits=3, value=rgb_scaled)
+        blue, green, red = tf.split(axis=3, num_or_size_splits=3, value=rgb_scaled)
 
         bgr = tf.concat(axis=3, values=[
             blue - vgg_mean[0],
