@@ -15,6 +15,8 @@ flags.DEFINE_string('out_path', './', 'output file directory')
 def load_image(path):
     img = cv2.imread(path)
     img = cv2.resize(img, (224, 224), interpolation=cv2.INTER_AREA)
+    # cv2.imshow('img', img)
+    # cv2.waitKey(0)
     return img
 
 
@@ -31,10 +33,9 @@ def _int64_feature(value):
 
 
 def write_tf_records(images, angles, velocities, ef_poses, filepath):
-
-
-    writer = tf.python_io.TFRecordWriter(filepath + 'train.tfrecords')
+    filpath = os.path.join(os.path.dirname(os.path.realpath(__file__)), filepath)
     print 'Writing', filepath + 'train.tfrecords'
+    writer = tf.python_io.TFRecordWriter(filepath + 'train.tfrecords')
 
     s_order = np.random.choice(len(images), len(images), replace = False)
     num_train = int(s_order.shape[0] * 0.9)
@@ -106,9 +107,11 @@ def main():
 
             traj_images = []
             image_files = glob.glob(traj_path + '/images/*.jpg')
+            image_files = sorted([(i, int(i.split('main_full_cropped_')[1][2:4])) for i in image_files], key = lambda x: x[1])
 
+            # print image_files
             for img_path in image_files:
-                img = load_image(img_path)
+                img = load_image(img_path[0])
                 traj_images.append(img)
 
             pkl_path = glob.glob(traj_path + '/*.pkl')[0]

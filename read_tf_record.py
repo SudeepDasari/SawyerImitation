@@ -89,7 +89,7 @@ def main():
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
         #
-        for batch_index in range(300):
+        for batch_index in range(5):
 
             img, vel, ef, ang, uf, fef = sess.run([images, velocities, endeffector_poses, angles, use_frames, final_eeps])
 
@@ -97,10 +97,11 @@ def main():
             print 'batch_index', batch_index
             print 'vel', np.min(vel), np.max(vel)
             print 'ef', np.min(ef), np.max(ef)
-
-            # for i in range(15):
-            #     cv2.imshow('img', img[i])
-            #     cv2.waitKey(0)
+            print 'uf', uf
+            print 'uf shape', uf.shape
+            for i in range(30):
+                cv2.imshow('img', img[i])
+                cv2.waitKey(0)
 
     #     # Stop the threads
         coord.request_stop()

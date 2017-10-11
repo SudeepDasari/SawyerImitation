@@ -66,6 +66,7 @@ def main():
             final_endeffector_poses_batch = read_tf_record(data_path + 'train.tfrecords')
 
         robot_configs_batch = tf.concat([angles_batch, endeffector_poses_batch], 1)
+
         model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, use_frames_batch,
                       final_endeffector_poses_batch)
 
@@ -74,6 +75,7 @@ def main():
         val_final_endeffector_poses_batch = read_tf_record(data_path + 'test.tfrecords', d_append='test')
 
         val_robot_configs_batch = tf.concat([val_angles_batch, val_endeffector_poses_batch], 1)
+
         val_model = Model(vgg19_path, val_images_batch, val_robot_configs_batch, val_actions_batch, val_use_frames_batch,
                       val_final_endeffector_poses_batch, training_scope)
 
@@ -119,6 +121,7 @@ def main():
             print 'Validation Loss:', val_loss
 
         train_loss, action_loss, eep_loss, _ = sess.run([model.loss, model.action_loss, model.eep_loss, model.train_op])
+
                                             #feed_dict)
         summary_str = tf.Summary()
         summary_str.value.add(tag="train_model/loss", simple_value=train_loss)

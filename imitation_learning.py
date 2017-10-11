@@ -54,26 +54,31 @@ class ImitationLearningModel:
 
             fp_flat = tf.reshape(tf.concat([fp_x, fp_y], 1), [-1, num_fp * 2])
 
+
             predicted_eeps = slim.layers.fully_connected(fp_flat, 3, scope='predicted_eeps', activation_fn=None)  # dim of eeps: 3
+
 
             conv_out = tf.concat([fp_flat,
                                   tf.reshape(self.robot_configs, [fp_flat.shape.as_list()[0], 10]),  # dim of angles: 7, dim of eeps: 3
                                   predicted_eeps],
                                  1)
 
+
             fc_layer1 = slim.layers.fully_connected(conv_out, 100, scope='fc1')
 
+
             predicted_actions = slim.layers.fully_connected(fc_layer1, 7, scope='predicted_actions', activation_fn=None)  # dim of velocities: 7
+
 
             self.predicted_actions, self.predicted_eeps = predicted_actions, predicted_eeps
 
     # Source: https://github.com/machrisaa/tensorflow-vgg/blob/master/vgg19.py
     def vgg_layer(self, images):
-        rgb_scaled = tf.to_float(images)
-
+        bgr_scaled = tf.to_float(images)
+        
         vgg_mean = tf.convert_to_tensor(np.array([103.939, 116.779, 123.68], dtype=np.float32))
 
-        blue, green, red = tf.split(axis=3, num_or_size_splits=3, value=rgb_scaled)
+        blue, green, red = tf.split(axis=3, num_or_size_splits=3, value=bgr_scaled)
 
         bgr = tf.concat(axis=3, values=[
             blue - vgg_mean[0],
