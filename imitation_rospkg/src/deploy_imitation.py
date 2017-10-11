@@ -28,7 +28,7 @@ class SawyerImitation(object):
                                       save_images=False)
 
         self.action_interval = 20 #Hz
-        self.action_sequence_length = 15
+        self.action_sequence_length = 60
 
         self.traj_duration = self.action_sequence_length * self.action_interval
         self.action_rate = rospy.Rate(self.action_interval)
@@ -36,18 +36,21 @@ class SawyerImitation(object):
         self.predictor = setup_predictor(model_path, vgg19_path)
         self.save_ctr = 0
         self.ctrl.set_neutral()
+        self.s = 0
 
     def query_action(self):
         image = cv2.resize(self.recorder.ltob.img_cv2, (224, 224), interpolation=cv2.INTER_AREA)
+        cv2.imwrite('frame'+str(self.s)+'.jpg', image)
+        self.s += 1
         robot_configs = np.concatenate((self.recorder.get_joint_angles(), self.recorder.get_endeffector_pos()))
 
         if image is None or robot_configs is None:
             return None
 
         action, predicted_eep = self.predictor(image, robot_configs)
-        print 'action vector: ', action
+        # print 'action vector: ', action
         print 'predicted end effector pose: ', predicted_eep
-        return action
+        return action, predicted_eep
 
     def apply_action(self, action):
         try:
@@ -70,9 +73,9 @@ class SawyerImitation(object):
             self.control_rate.sleep()
             action, predicted_eep = self.query_action()
 
-            action_dict = {}
-            for i in range(len(self.ctrl.joint_names)):
-                action_dict[self.ctrl.joint_names[i]] = action[i]
+            action_dict = dict(zip(self.ctrl.joint_names, action))
+            # for i in range(len(self.ctrl.joint_names)):
+            #     action_dict[self.ctrl.joint_names[i]] = action[i]
                 # print 'key', self.ctrl.joint_names[i], 'value', action_dict[self.ctrl.joint_names[i]]
             actions.append(action)
             self.apply_action(action_dict)
@@ -84,6 +87,6 @@ if __name__ == '__main__':
     # FLAGS = flags.FLAGS
     # flags.DEFINE_string('model_path', './', 'path to output model/stats')
     # flags.DEFINE_string('vgg19_path', './', 'path to npy file')
-    d = SawyerImitation('modeldata_100_100/modelfinal', 'out/')
+    d = SawyerImitation('model_100_100_new/model10080', 'out/')
     pdb.set_trace()
     d.run_trajectory()
