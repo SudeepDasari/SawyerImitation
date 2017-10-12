@@ -39,9 +39,9 @@ class Model:
                 self.m = ImitationLearningModel(vgg19_path, images_batch, robot_configs_batch, actions_batch)
                 self.m.build()
 
-        action_loss =  l2_loss(self.m.actions, self.m.predicted_actions)
-        eep_loss = tf.reduce_sum(tf.square(tf.multiply(use_frames_batch, final_endeffector_poses_batch) - \
-                           tf.multiply(use_frames_batch, self.m.predicted_eeps)))
+        action_loss = l2_loss(self.m.actions, self.m.predicted_actions)
+        eep_loss = tf.reduce_sum(tf.square(tf.multiply(use_frames_batch, final_endeffector_poses_batch) -
+                                           tf.multiply(use_frames_batch, self.m.predicted_eeps)))
         eep_loss = tf.cond(eep_loss > 0,
                            lambda: tf.divide(eep_loss, tf.cast(tf.count_nonzero(use_frames_batch), tf.float32)),
                            lambda: eep_loss)
