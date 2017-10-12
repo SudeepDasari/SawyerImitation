@@ -14,7 +14,7 @@ def l2_loss(true, pred):
     Returns:
       mean squared error between ground truth and predicted image.
     """
-    return tf.reduce_sum(tf.square(true - pred)) / tf.to_float(tf.size(pred))
+    return tf.reduce_sum(tf.square(true - pred)) / pred.shape.as_list()[0]
 
 
 def l1_loss(true, pred):
@@ -39,9 +39,9 @@ class Model:
                 self.m = ImitationLearningModel(vgg19_path, images_batch, robot_configs_batch, actions_batch)
                 self.m.build()
 
-        action_loss = l1_loss(self.m.actions, self.m.predicted_actions) + 0.01 * l2_loss(self.m.actions, self.m.predicted_actions)
-        eep_loss = l2_loss(tf.multiply(use_frames_batch, final_endeffector_poses_batch),
-                           tf.multiply(use_frames_batch, self.m.predicted_eeps))
+        action_loss =  l2_loss(self.m.actions, self.m.predicted_actions)
+        eep_loss = tf.reduce_sum(tf.square(tf.multiply(use_frames_batch, final_endeffector_poses_batch) - \
+                           tf.multiply(use_frames_batch, self.m.predicted_eeps)))
         eep_loss = tf.cond(eep_loss > 0,
                            lambda: tf.divide(eep_loss, tf.cast(tf.count_nonzero(use_frames_batch), tf.float32)),
                            lambda: eep_loss)
@@ -59,7 +59,7 @@ def main():
     data_path = FLAGS.data_path
     output_dir = FLAGS.model_path
 
-    NUM_ITERS = 6000
+    NUM_ITERS = 36000
 
     with tf.variable_scope('model', reuse=None) as training_scope:
         images_batch, angles_batch, actions_batch, endeffector_poses_batch, use_frames_batch, \
@@ -79,7 +79,7 @@ def main():
         val_model = Model(vgg19_path, val_images_batch, val_robot_configs_batch, val_actions_batch, val_use_frames_batch,
                       val_final_endeffector_poses_batch, training_scope)
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
     # Make training session.
 
     vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
