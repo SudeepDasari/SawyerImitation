@@ -59,6 +59,7 @@ class ImitationLearningModel:
             print 'fp_flat', fp_flat
             print 'configs', self.robot_configs
 
+
             self.predicted_eeps = slim.layers.fully_connected(fp_flat, 3, scope='predicted_eeps', activation_fn=None)  # dim of eeps: 3
 
 
@@ -67,10 +68,11 @@ class ImitationLearningModel:
                                   self.predicted_eeps],
                                  1)
 
-
             fc_layer1 = slim.layers.fully_connected(conv_out, 100, scope='fc1')
 
+
             self.predicted_actions = slim.layers.fully_connected(fc_layer1, 7, scope='predicted_actions', activation_fn=None)  # dim of velocities: 7
+
 
 
     # Source: https://github.com/machrisaa/tensorflow-vgg/blob/master/vgg19.py
