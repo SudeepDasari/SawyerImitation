@@ -30,6 +30,7 @@ class ImitationLearningModel:
                 slim.layers.conv2d(layer2, 32, [3, 3], stride=2, scope='conv3'), scope='conv3_norm')
 
             batch_size, num_rows, num_cols, num_fp = layer3.get_shape()
+            print 'shape', layer3.get_shape
             num_rows, num_cols, num_fp = [int(x) for x in [num_rows, num_cols, num_fp]]
 
             x_map = np.empty([num_rows, num_cols], np.float32)
@@ -48,29 +49,29 @@ class ImitationLearningModel:
 
             features = tf.reshape(tf.transpose(layer3, [0, 3, 1, 2]), [-1, num_rows * num_cols])
             softmax = tf.nn.softmax(features)
+            print 'softmax', softmax
 
             fp_x = tf.reduce_sum(tf.multiply(x_map, softmax), [1], keep_dims=True)
             fp_y = tf.reduce_sum(tf.multiply(y_map, softmax), [1], keep_dims=True)
-
+            print 'fp_x', fp_x
+            print 'fp_y', fp_y
             fp_flat = tf.reshape(tf.concat([fp_x, fp_y], 1), [-1, num_fp * 2])
+            print 'fp_flat', fp_flat
+            print 'configs', self.robot_configs
 
-
-            predicted_eeps = slim.layers.fully_connected(fp_flat, 3, scope='predicted_eeps', activation_fn=None)  # dim of eeps: 3
+            self.predicted_eeps = slim.layers.fully_connected(fp_flat, 3, scope='predicted_eeps', activation_fn=None)  # dim of eeps: 3
 
 
             conv_out = tf.concat([fp_flat,
-                                  tf.reshape(self.robot_configs, [fp_flat.shape.as_list()[0], 10]),  # dim of angles: 7, dim of eeps: 3
-                                  predicted_eeps],
+                                  self.robot_configs,  # dim of angles: 7, dim of eeps: 3
+                                  self.predicted_eeps],
                                  1)
 
 
             fc_layer1 = slim.layers.fully_connected(conv_out, 100, scope='fc1')
 
+            self.predicted_actions = slim.layers.fully_connected(fc_layer1, 7, scope='predicted_actions', activation_fn=None)  # dim of velocities: 7
 
-            predicted_actions = slim.layers.fully_connected(fc_layer1, 7, scope='predicted_actions', activation_fn=None)  # dim of velocities: 7
-
-
-            self.predicted_actions, self.predicted_eeps = predicted_actions, predicted_eeps
 
     # Source: https://github.com/machrisaa/tensorflow-vgg/blob/master/vgg19.py
     def vgg_layer(self, images):

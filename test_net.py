@@ -51,7 +51,7 @@ def main():
                       val_final_endeffector_poses_batch, training_scope)
 
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
     # Make training session.
 
     vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
@@ -70,9 +70,9 @@ def main():
     reals = []
     predictions = []
     for i in range(20):
-        real_actions, predicted_actions, loss = sess.run([val_model.m.actions, val_model.m.predicted_actions, val_model.loss])
+        real_actions, predicted_actions, loss, eep_loss = sess.run([val_model.m.actions, val_model.m.predicted_actions, val_model.loss, val_model.eep_loss])
         print 'loss is', loss
-
+        print 'diff', eep_loss
         reals.append(real_actions)
         predictions.append(predicted_actions)
 

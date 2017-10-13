@@ -74,6 +74,7 @@ def main():
     flags.DEFINE_string('data_path', './', 'path to tfrecords file')
 
     import cv2
+    import matplotlib.pyplot as plt
         # # Initialize all global and local variables
     images, angles, velocities, endeffector_poses, use_frames, final_eeps = read_tf_record(FLAGS.data_path, shuffle=False)
 
@@ -95,14 +96,21 @@ def main():
 
 
             print 'batch_index', batch_index
-            print 'vel', np.min(vel), np.max(vel)
-            print 'ef', np.min(ef), np.max(ef)
+            print 'vel', vel.shape
+            print 'ef', ef
             print 'uf', uf
-            print 'uf shape', uf.shape
+            print 'fef', fef
+
+
             for i in range(30):
+
                 cv2.imshow('img', img[i])
                 cv2.waitKey(0)
 
+            plt.plot(vel[:, 0])
+            plt.figure()
+            plt.plot(ang[:, 0])
+            plt.show()
     #     # Stop the threads
         coord.request_stop()
     #

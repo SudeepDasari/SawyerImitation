@@ -28,7 +28,7 @@ class SawyerImitation(object):
                                       save_images=False)
 
         self.action_interval = 20 #Hz
-        self.action_sequence_length = 60
+        self.action_sequence_length = 15
 
         self.traj_duration = self.action_sequence_length * self.action_interval
         self.action_rate = rospy.Rate(self.action_interval)
@@ -40,7 +40,8 @@ class SawyerImitation(object):
 
     def query_action(self):
         image = cv2.resize(self.recorder.ltob.img_cv2, (224, 224), interpolation=cv2.INTER_AREA)
-        cv2.imwrite('frame'+str(self.s)+'.jpg', image)
+        cv2.imwrite('test'+str(self.s)+'.jpg', image)
+
         self.s += 1
         robot_configs = np.concatenate((self.recorder.get_joint_angles(), self.recorder.get_endeffector_pos()))
 
@@ -87,6 +88,6 @@ if __name__ == '__main__':
     # FLAGS = flags.FLAGS
     # flags.DEFINE_string('model_path', './', 'path to output model/stats')
     # flags.DEFINE_string('vgg19_path', './', 'path to npy file')
-    d = SawyerImitation('model_100_100_new/model10080', 'out/')
+    d = SawyerImitation('loss_rev_model_data_200/model27720', 'out/')
     pdb.set_trace()
     d.run_trajectory()

@@ -11,10 +11,13 @@ def setup_predictor(model_path, vgg19_path):
     configs_pl = tf.placeholder(tf.float32, name='configs', shape=(1, 10))
 
     with tf.variable_scope('model', reuse=None):
-        model = ImitationLearningModel(vgg19_path, images_pl, configs_pl)
+        model = ImitationLearningModel(vgg19_path, images=images_pl, robot_configs=configs_pl)
         model.build()
+        print model.predicted_actions
+        print model.predicted_eeps
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
+
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
 
     vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
     saver = tf.train.Saver(vars, max_to_keep=0)
@@ -32,23 +35,27 @@ def setup_predictor(model_path, vgg19_path):
 
         feed_dict = {
             images_pl: feed_image,
-            configs_pl: feed_config,
+            configs_pl: feed_config
         }
+
+
         predicted_actions, predicted_eeps = sess.run([model.predicted_actions, model.predicted_eeps], feed_dict)
         return predicted_actions[0], predicted_eeps[0]
 
     return predictor_func
 
 if __name__ == '__main__':
-    demo_image = cv2.imread('demo_frame.png')
+    demo_image = cv2.imread('../../frame0.jpg')
     demo_action = np.zeros(10)
-    pred = setup_predictor('modeldata_100_50/modelfinal', 'out/')
+    demo_action[0] = 0.1
+    pred = setup_predictor('../../rev_model_data_200/modelfinal', '../../out/')
     pred_actions, pred_eep = pred(demo_image, demo_action)
     print 'predicted actions', pred_actions
     print 'predicted eep', pred_eep
 
     t0 = time.time()
     for i in range(1000):
+
         pred_actions, pred_eep = pred(demo_image, demo_action)
     t1 = time.time()
     print 'time:', (t1 - t0) / 1000

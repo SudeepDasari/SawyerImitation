@@ -42,9 +42,9 @@ class Model:
         action_loss = l1_loss(self.m.actions, self.m.predicted_actions) + 0.01 * l2_loss(self.m.actions, self.m.predicted_actions)
         eep_loss = l2_loss(tf.multiply(use_frames_batch, final_endeffector_poses_batch),
                            tf.multiply(use_frames_batch, self.m.predicted_eeps))
-        eep_loss = tf.cond(eep_loss > 0,
-                           lambda: tf.divide(eep_loss, tf.cast(tf.count_nonzero(use_frames_batch), tf.float32)),
-                           lambda: eep_loss)
+        # eep_loss = tf.cond(eep_loss > 0,
+        #                    lambda: tf.divide(eep_loss, tf.cast(tf.count_nonzero(use_frames_batch), tf.float32)),
+        #                    lambda: eep_loss)
         self.eep_multiplier = 0.01
         loss = action_loss + self.eep_multiplier * eep_loss
         self.eep_loss = eep_loss
