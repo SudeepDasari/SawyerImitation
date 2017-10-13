@@ -61,7 +61,7 @@ def main():
     data_path = FLAGS.data_path
     output_dir = FLAGS.model_path
 
-    NUM_ITERS = 36000
+    NUM_ITERS = 60000
 
     with tf.variable_scope('model', reuse=None) as training_scope:
         images_batch, angles_batch, actions_batch, endeffector_poses_batch, use_frames_batch, \
