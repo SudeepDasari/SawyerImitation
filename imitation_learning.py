@@ -30,7 +30,7 @@ class ImitationLearningModel:
                 slim.layers.conv2d(layer2, 32, [3, 3], stride=2, scope='conv3'), scope='conv3_norm')
 
             batch_size, num_rows, num_cols, num_fp = layer3.get_shape()
-            print 'shape', layer3.get_shape
+            # print 'shape', layer3.get_shape
             num_rows, num_cols, num_fp = [int(x) for x in [num_rows, num_cols, num_fp]]
 
             x_map = np.empty([num_rows, num_cols], np.float32)
@@ -49,15 +49,15 @@ class ImitationLearningModel:
 
             features = tf.reshape(tf.transpose(layer3, [0, 3, 1, 2]), [-1, num_rows * num_cols])
             softmax = tf.nn.softmax(features)
-            print 'softmax', softmax
+            # print 'softmax', softmax
 
             fp_x = tf.reduce_sum(tf.multiply(x_map, softmax), [1], keep_dims=True)
             fp_y = tf.reduce_sum(tf.multiply(y_map, softmax), [1], keep_dims=True)
-            print 'fp_x', fp_x
-            print 'fp_y', fp_y
+            # print 'fp_x', fp_x
+            # print 'fp_y', fp_y
             fp_flat = tf.reshape(tf.concat([fp_x, fp_y], 1), [-1, num_fp * 2])
-            print 'fp_flat', fp_flat
-            print 'configs', self.robot_configs
+            # print 'fp_flat', fp_flat
+            # print 'configs', self.robot_configs
 
 
             self.predicted_eeps = slim.layers.fully_connected(fp_flat, 3, scope='predicted_eeps', activation_fn=None)  # dim of eeps: 3
@@ -80,8 +80,11 @@ class ImitationLearningModel:
         bgr_scaled = tf.to_float(images)
         
         vgg_mean = tf.convert_to_tensor(np.array([103.939, 116.779, 123.68], dtype=np.float32))
-
+        # print 'images', images
         blue, green, red = tf.split(axis=3, num_or_size_splits=3, value=bgr_scaled)
+        # print 'blue', blue
+        # print 'green', green
+        # print 'red', red
 
         bgr = tf.concat(axis=3, values=[
             blue - vgg_mean[0],
