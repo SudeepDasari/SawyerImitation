@@ -14,9 +14,10 @@ flags.DEFINE_string('out_path', './', 'output file directory')
 
 def load_image(path):
     img = cv2.imread(path)
+    img = img[:,150:-150,:]
     img = cv2.resize(img, (224, 224), interpolation=cv2.INTER_AREA)
     # cv2.imshow('img', img)
-    # cv2.waitKey(0)
+    # cv2.waitKey(1)
     return img
 
 

@@ -30,6 +30,7 @@ def setup_predictor(model_path, vgg19_path):
     saver.restore(sess, model_path)
 
     def predictor_func(images=None, robot_configs=None):
+
         feed_image = images.astype(np.uint8).reshape((1, 224, 224, 3))
         feed_config = robot_configs.astype(np.float32).reshape((1, 10))
 
@@ -40,15 +41,22 @@ def setup_predictor(model_path, vgg19_path):
 
 
         predicted_actions, predicted_eeps = sess.run([model.predicted_actions, model.predicted_eeps], feed_dict)
+        # print 'fp_x', fp_x
+        # print 'fp_y', fp_y
+        # height, width = images.shape[:2]
+        # drawn = images.copy()
+        # for i in range(32):
+        #     cv2.circle(drawn, (int(height * (fp_x[i] + 0.5)) , int(width * (fp_y[i] + 0.5))), 5, (0, 0, 255), -1)
+
         return predicted_actions[0], predicted_eeps[0]
 
     return predictor_func
 
 if __name__ == '__main__':
-    demo_image = cv2.imread('../../frame0.jpg')
+    demo_image = cv2.imread('../../test0.jpg')
     demo_action = np.zeros(10)
     demo_action[0] = 0.1
-    pred = setup_predictor('../../rev_model_data_200/modelfinal', '../../out/')
+    pred = setup_predictor('../../single_lossrev_model/modelfinal', '../../out/')
     pred_actions, pred_eep = pred(demo_image, demo_action)
     print 'predicted actions', pred_actions
     print 'predicted eep', pred_eep

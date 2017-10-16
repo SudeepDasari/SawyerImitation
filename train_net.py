@@ -18,7 +18,7 @@ def l2_loss(true, pred):
 
 
 def l1_loss(true, pred):
-    return tf.reduce_sum(tf.abs(true - pred))
+    return tf.reduce_sum(tf.abs(true - pred)) / pred.shape.as_list()[0]
 
 
 class Model:
@@ -40,7 +40,7 @@ class Model:
                 self.m.build()
 
 
-        action_loss = l2_loss(self.m.actions, self.m.predicted_actions)
+        action_loss = 0.01 * l2_loss(self.m.actions, self.m.predicted_actions) + l1_loss(self.m.actions, self.m.predicted_actions)
         eep_loss = tf.reduce_sum(tf.square(tf.multiply(use_frames_batch, final_endeffector_poses_batch) -
                                            tf.multiply(use_frames_batch, self.m.predicted_eeps)))
         eep_loss = tf.cond(eep_loss > 0,

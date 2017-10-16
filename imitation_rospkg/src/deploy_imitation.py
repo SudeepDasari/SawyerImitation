@@ -10,6 +10,7 @@ from berkeley_sawyer.srv import *
 from tensorflow.python.platform import flags
 import matplotlib.pyplot as plt
 import pdb
+import moviepy.editor as mpy
 
 from robot_controller import RobotController
 from recorder.robot_recorder import RobotRecorder
@@ -28,7 +29,7 @@ class SawyerImitation(object):
                                       save_images=False)
 
         self.action_interval = 20 #Hz
-        self.action_sequence_length = 15
+        self.action_sequence_length = 60
 
         self.traj_duration = self.action_sequence_length * self.action_interval
         self.action_rate = rospy.Rate(self.action_interval)
@@ -39,18 +40,22 @@ class SawyerImitation(object):
         self.s = 0
 
     def query_action(self):
-        image = cv2.resize(self.recorder.ltob.img_cv2, (224, 224), interpolation=cv2.INTER_AREA)
-        cv2.imwrite('test'+str(self.s)+'.jpg', image)
+        image = cv2.resize(self.recorder.ltob.img_cv2[:,150:-150,:], (224, 224), interpolation=cv2.INTER_AREA)
 
-        self.s += 1
         robot_configs = np.concatenate((self.recorder.get_joint_angles(), self.recorder.get_endeffector_pos()))
 
         if image is None or robot_configs is None:
             return None
 
         action, predicted_eep = self.predictor(image, robot_configs)
+        self.img_stack.append(image)
+
+        self.s += 1
+        if self.s <=5:
+            action[np.abs(action) < 0.05] *= 15
+
         # print 'action vector: ', action
-        print 'predicted end effector pose: ', predicted_eep
+        # print 'predicted end effector pose: ', predicted_eep
         return action, predicted_eep
 
     def apply_action(self, action):
@@ -65,14 +70,20 @@ class SawyerImitation(object):
             rospy.sleep(.5)
 
     def run_trajectory(self):
-        print 'start', self.recorder.get_endeffector_pos()
+        self.start = self.recorder.get_endeffector_pos()
+        print 'actual end eep', self.start
         self.ctrl.set_neutral()
+        self.img_stack = []
 
         step = 0
         actions = []
         while step < self.action_sequence_length:
             self.control_rate.sleep()
             action, predicted_eep = self.query_action()
+            if step == 0:
+                print 'predicted eep', predicted_eep
+                print 'diff sqd', np.sum(np.power(predicted_eep - self.start, 2))
+                print 'diff dim', np.abs(predicted_eep - self.start)
 
             action_dict = dict(zip(self.ctrl.joint_names, action))
             # for i in range(len(self.ctrl.joint_names)):
@@ -83,11 +94,13 @@ class SawyerImitation(object):
 
             step += 1
         print 'end', self.recorder.get_endeffector_pos()
+        clip = mpy.ImageSequenceClip([cv2.cvtColor(i, cv2.COLOR_BGR2RGB) for i in self.img_stack], fps=20)
+        clip.write_gif('test_frames.gif')
 
 if __name__ == '__main__':
     # FLAGS = flags.FLAGS
     # flags.DEFINE_string('model_path', './', 'path to output model/stats')
     # flags.DEFINE_string('vgg19_path', './', 'path to npy file')
-    d = SawyerImitation('loss_rev_model_data_200/model27720', 'out/')
+    d = SawyerImitation('single_crop_l1lossrev_model/modelfinal', 'out/')
     pdb.set_trace()
     d.run_trajectory()
