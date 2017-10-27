@@ -73,8 +73,8 @@ class DemoRobotRecorder(object):
         if __name__ !=  '__main__':
             # the main instance one also records actions and joint angles
             self.instance_type = 'main'
-            self._gripper = None
-            self.gripper_name = '_'.join([side, 'gripper'])
+            # self._gripper = None
+            # self.gripper_name = '_'.join([side, 'gripper'])
             import intera_interface
             self._limb_right = intera_interface.Limb(side)
         else:
@@ -196,7 +196,7 @@ class DemoRobotRecorder(object):
         startcol = 180
         startrow = 0
         endcol = startcol + 1500
-        endrow = startrow + 1500
+        endrow = startrow + 2000
         cv_image = copy.deepcopy(cv_image[startrow:endrow, startcol:endcol])
 
         cv_image = cv2.resize(cv_image, (0, 0), fx=.75, fy=.75, interpolation=cv2.INTER_AREA)

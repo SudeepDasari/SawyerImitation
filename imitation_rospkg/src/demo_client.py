@@ -56,7 +56,7 @@ class Pushback_Recorder(object):
 
         self.limb = intera_interface.Limb("right")
         self.joint_names = self.limb.joint_names()
-        self.gripper = intera_interface.Gripper("right")
+        # self.gripper = intera_interface.Gripper("right")
 
         self.name_of_service = "ExternalTools/right/PositionKinematicsNode/FKService"
         self.fksvc = rospy.ServiceProxy(self.name_of_service, SolvePositionFK)
@@ -71,8 +71,8 @@ class Pushback_Recorder(object):
         self.imp_ctrl_release_spring_pub = rospy.Publisher('release_spring', Float32, queue_size=10)
         self.imp_ctrl_active = rospy.Publisher('imp_ctrl_active', Int64, queue_size=10)
 
-        self.gripper.set_velocity(self.gripper.MAX_VELOCITY)  # "set 100% velocity"),
-        self.gripper.open()
+        # self.gripper.set_velocity(self.gripper.MAX_VELOCITY)  # "set 100% velocity"),
+        # self.gripper.open()
         self.control_rate = rospy.Rate(20)
         self.imp_ctrl_active.publish(0)
 

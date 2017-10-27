@@ -51,8 +51,8 @@ class SawyerImitation(object):
         self.img_stack.append(image)
 
         self.s += 1
-        if self.s <=5:
-            action[np.abs(action) < 0.05] *= 15
+        # if self.s <=5:
+        #     action[np.abs(action) < 0.05] *= 15
 
         # print 'action vector: ', action
         # print 'predicted end effector pose: ', predicted_eep
@@ -101,6 +101,6 @@ if __name__ == '__main__':
     # FLAGS = flags.FLAGS
     # flags.DEFINE_string('model_path', './', 'path to output model/stats')
     # flags.DEFINE_string('vgg19_path', './', 'path to npy file')
-    d = SawyerImitation('single_crop_l1lossrev_model/modelfinal', 'out/')
+    d = SawyerImitation('single_crop_l1losseeprev_model/model50940', 'out/')
     pdb.set_trace()
     d.run_trajectory()

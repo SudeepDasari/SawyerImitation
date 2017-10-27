@@ -120,7 +120,9 @@ def main():
             sawyer_data = cPickle.load(open(pkl_path, 'rb'))
             joint_angles = sawyer_data['jointangles']
             joint_velocities = sawyer_data['jointvelocities']
+
             endeffector_pos = sawyer_data['endeffector_pos']
+
 
             stacked = np.stack(traj_images, axis = 0)
             images.append(stacked)
