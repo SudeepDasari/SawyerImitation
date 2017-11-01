@@ -40,7 +40,7 @@ class SawyerImitation(object):
         self.s = 0
 
     def query_action(self):
-        image = cv2.resize(self.recorder.ltob.img_cv2[:,150:-150,:], (224, 224), interpolation=cv2.INTER_AREA)
+        image = cv2.resize(self.recorder.ltob.img_cv2[:-150,275:-150,:], (224, 224), interpolation=cv2.INTER_AREA)
 
         robot_configs = np.concatenate((self.recorder.get_joint_angles(), self.recorder.get_endeffector_pos()))
 
