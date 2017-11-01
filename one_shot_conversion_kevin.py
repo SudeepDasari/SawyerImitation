@@ -3,6 +3,7 @@ import glob
 import numpy as np
 import cv2
 import moviepy.editor as mpy
+import imageio
 import cPickle as pkl
 import random
 data_dir = '~/demonstration_10_24/'
@@ -52,12 +53,19 @@ for c in collector:
                 samps = sorted(random.sample(range(1, IN_T), k = OUT_T - 2))
                 img_out = first_fr + [imgs[i] for i in samps] + last_fr
 
-                print 'Outputing', len(img_out), 'images'
-                clip = mpy.ImageSequenceClip(img_out, fps= int(OUT_T / (IN_T / 20.)))
-                clip.write_gif(gif_out_dir+ 'cond' + str(cntr) + '.samp' + str(s) + '.gif')
+                gif_out = gif_out_dir+ 'cond' + str(cntr) + '.samp' + str(s) + '.gif'
+                print 'Outputing', len(img_out), 'images to', gif_out
+
+                writer = imageio.save(gif_out, duration= (IN_T / 20.) / OUT_T,
+                                      quantizer= 0 , palettesize=256)
+                i = 0
+                for frame in img_out:
+                    writer.append_data(frame)
+                    i += 1
+                print 'Wrote', i , 'frames'
 
                 samps = [0] + samps + [IN_T - 1]
-                print 'Outputting', len(samps), 'samples'
+                # print 'Outputting', len(samps), 'samples'
                 demoX[s, cntr, :, :7] = traj_angles[samps, :]
                 demoX[s, cntr, :, 7:] = traj_efs[samps, :]
                 demoU[s, cntr, :, :] = traj_vels[samps, :]

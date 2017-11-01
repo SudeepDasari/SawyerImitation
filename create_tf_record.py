@@ -6,7 +6,7 @@ import cv2
 import os
 import cPickle
 import glob
-
+import matplotlib.pyplot as plt
 FLAGS = flags.FLAGS
 flags.DEFINE_string('data_path', './', 'path to trajectory folders')
 flags.DEFINE_string('out_path', './', 'output file directory')
@@ -14,10 +14,10 @@ flags.DEFINE_string('out_path', './', 'output file directory')
 
 def load_image(path):
     img = cv2.imread(path)
-    img = img[:,150:-150,:]
+    img = img[:-150,275:-150,:]
     img = cv2.resize(img, (224, 224), interpolation=cv2.INTER_AREA)
-    # cv2.imshow('img', img)
-    # cv2.waitKey(1)
+    cv2.imshow('img', img)
+    cv2.waitKey(1)
     return img
 
 
@@ -38,12 +38,9 @@ def write_tf_records(images, angles, velocities, ef_poses, filepath):
     print 'Writing', filepath + 'train.tfrecords'
     writer = tf.python_io.TFRecordWriter(filepath + 'train.tfrecords')
 
-    s_order = np.random.choice(len(images), len(images), replace = False)
-    num_train = int(s_order.shape[0] * 0.9)
+    s_order = np.random.choice(200, 200, replace = False)
 
-    print 'Train:', num_train, 'Test', s_order.shape[0] - num_train
-
-    for traj_iter in s_order[:num_train]:
+    for traj_iter in s_order:
         print 'Outputting train traj', traj_iter
 
         image_raw = images[traj_iter].astype(np.uint8)
@@ -65,7 +62,9 @@ def write_tf_records(images, angles, velocities, ef_poses, filepath):
 
     writer = tf.python_io.TFRecordWriter(filepath + 'test.tfrecords')
     print 'Writing', filepath + 'test.tfrecords'
-    for traj_iter in s_order[num_train:]:
+    s_order = np.random.choice(20, 20, replace=False) + 200
+
+    for traj_iter in s_order:
         print 'Outputting test traj', traj_iter
 
         image_raw = images[traj_iter].astype(np.uint8)

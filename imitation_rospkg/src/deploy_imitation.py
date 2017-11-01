@@ -101,6 +101,6 @@ if __name__ == '__main__':
     # FLAGS = flags.FLAGS
     # flags.DEFINE_string('model_path', './', 'path to output model/stats')
     # flags.DEFINE_string('vgg19_path', './', 'path to npy file')
-    d = SawyerImitation('single_crop_l1losseeprev_model/model50940', 'out/')
+    d = SawyerImitation('l1_cropped_lighting/model45360', 'out/')
     pdb.set_trace()
     d.run_trajectory()
