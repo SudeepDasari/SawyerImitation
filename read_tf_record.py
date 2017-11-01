@@ -10,7 +10,7 @@ IMG_HEIGHT = 224
 COLOR_CHANNELS = 3
 
 
-def read_tf_record(data_path, d_append='train', shuffle = True, rng = 0.2):
+def read_tf_record(data_path, d_append='train', shuffle = True, rng = 0.3):
     #gets data path
     # data_path = FLAGS.data_path
 
@@ -58,7 +58,10 @@ def read_tf_record(data_path, d_append='train', shuffle = True, rng = 0.2):
     image_rgb = tf.image.convert_image_dtype(image_rgb, tf.float32)
     image_hsv = tf.image.rgb_to_hsv(image_rgb)
     img_stack = [tf.unstack(i, axis = 2) for i in tf.unstack(image_hsv, axis = 0)]
-    stack_mod = [tf.stack([x[0], x[1],x[2] + tf.random_uniform([1], minval = -rng, maxval = rng)] ,axis = 2) for x in img_stack]
+    stack_mod = [tf.stack([x[0] + tf.random_uniform([1], minval = -rng, maxval = rng),
+                           x[1] + tf.random_uniform([1], minval = -rng, maxval = rng),
+                           x[2] + tf.random_uniform([1], minval = -rng, maxval = rng)]
+                          ,axis = 2) for x in img_stack]
 
     image_rgb = tf.image.hsv_to_rgb(tf.stack(stack_mod))
     image_rgb = tf.image.convert_image_dtype(image_rgb, tf.uint8, saturate=True)
@@ -112,15 +115,14 @@ def main():
             print 'fef', fef
 
 
-            for i in range(1):
-                plt.figure()
-                plt.imshow(img[i][:,:,::-1])
-                plt.show()
+            for i in img:
+                cv2.imshow('img', i)
+                cv2.waitKey(1000)
 
-            plt.plot(vel[:, 0])
-            plt.figure()
-            plt.plot(ang[:, 0])
-            plt.show()
+            # plt.plot(vel[:, 0])
+            # plt.figure()
+            # plt.plot(ang[:, 0])
+            # plt.show()
     #     # Stop the threads
         coord.request_stop()
     #

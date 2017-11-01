@@ -61,7 +61,7 @@ def main():
     data_path = FLAGS.data_path
     output_dir = FLAGS.model_path
 
-    NUM_ITERS = 60000
+    NUM_ITERS = 100000
 
     with tf.variable_scope('model', reuse=None) as training_scope:
         images_batch, angles_batch, actions_batch, endeffector_poses_batch, use_frames_batch, \
@@ -74,7 +74,7 @@ def main():
 
     with tf.variable_scope('val_model', reuse=None):
         val_images_batch, val_angles_batch, val_actions_batch, val_endeffector_poses_batch, val_use_frames_batch, \
-        val_final_endeffector_poses_batch = read_tf_record(data_path + 'test.tfrecords', d_append='test')
+        val_final_endeffector_poses_batch = read_tf_record(data_path + 'test.tfrecords', d_append='test', rng=0)
 
         val_robot_configs_batch = tf.concat([val_angles_batch, val_endeffector_poses_batch], 1)
 
