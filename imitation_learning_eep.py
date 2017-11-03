@@ -7,12 +7,13 @@ import os
 
 
 class ImitationLearningModel:
-    def __init__(self, vgg19_path, images=None):
+    def __init__(self, vgg19_path, images=None, robot_configs=None):
         self.images = images
+        self.robot_configs = robot_configs
         self.vgg_dict = np.load(os.path.join(vgg19_path, "vgg19.npy"), encoding='latin1').item()
 
-        self.predicted_next_eeps = None
-        self.predicted_final_eeps = None
+        self.predicted_final_eep = None
+        self.predicted_actions = None
 
     def build(self):
         with slim.arg_scope([slim.layers.conv2d, slim.layers.fully_connected, tf_layers.layer_norm]):
@@ -58,18 +59,18 @@ class ImitationLearningModel:
 
             fc_layer1 = slim.layers.fully_connected(fp_flat, 50, scope='fc1')
 
-            self.predicted_final_eeps = slim.layers.fully_connected(fc_layer1, 3, scope='predicted_final_eeps',
-                                                                    activation_fn=None)  # dim of eeps: 3
+            self.predicted_final_eep = slim.layers.fully_connected(fc_layer1, 3, scope='predicted_final_eep',
+                                                                   activation_fn=None)  # dim of eeps: 3
 
             conv_out = tf.concat([fp_flat,
-                                  #self.robot_configs,  # dim of angles: 7, dim of eeps: 3
-                                  self.predicted_final_eeps],
+                                  self.robot_configs,  # dim of angles: 7, dim of eeps: 3
+                                  self.predicted_final_eep],
                                  1)
 
             fc_layer2 = slim.layers.fully_connected(conv_out, 50, scope='fc2')
 
-            self.predicted_next_eeps = slim.layers.fully_connected(fc_layer2, 3, scope='predicted_next_eeps',
-                                                                   activation_fn=None)  # dim of velocities: 7
+            self.predicted_actions = slim.layers.fully_connected(fc_layer2, 3, scope='predicted_action',
+                                                             activation_fn=None)  # dim of velocities: 3
 
     # Source: https://github.com/machrisaa/tensorflow-vgg/blob/master/vgg19.py
     def vgg_layer(self, images):
