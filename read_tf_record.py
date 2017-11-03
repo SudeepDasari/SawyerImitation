@@ -40,7 +40,6 @@ def read_tf_record(data_path, d_append='train', shuffle = True, rng = 0.3):
     velocity = tf.reshape(features[d_append+'/velocity'], shape=[NUM_FRAMES, NUM_JOINTS])
     endeffector_pos = tf.reshape(features[d_append+'/endeffector_pos'], shape=[NUM_FRAMES, STATE_DIM])
 
-    next_endeffector_pos = tf.concat([endeffector_pos[1:], endeffector_pos[-1:]], 0)
     final_endeffector_pos = tf.reshape(tf.tile(endeffector_pos[-1:, :], [NUM_FRAMES, 1]), shape=[NUM_FRAMES, STATE_DIM])
 
     use_frame = np.zeros(NUM_FRAMES)
@@ -55,30 +54,30 @@ def read_tf_record(data_path, d_append='train', shuffle = True, rng = 0.3):
     # Reshape image data into original video
     image = tf.reshape(image, [NUM_FRAMES, IMG_HEIGHT, IMG_WIDTH, COLOR_CHANNELS])
 
-    # image_rgb = image[:, :, :, ::-1]
-    # image_rgb = tf.image.convert_image_dtype(image_rgb, tf.float32)
-    # image_hsv = tf.image.rgb_to_hsv(image_rgb)
-    # img_stack = [tf.unstack(i, axis = 2) for i in tf.unstack(image_hsv, axis = 0)]
-    # stack_mod = [tf.stack([x[0] + tf.random_uniform([1], minval = -rng, maxval = rng),
-    #                        x[1] + tf.random_uniform([1], minval = -rng, maxval = rng),
-    #                        x[2] + tf.random_uniform([1], minval = -rng, maxval = rng)]
-    #                       ,axis = 2) for x in img_stack]
-    #
-    # image_rgb = tf.image.hsv_to_rgb(tf.stack(stack_mod))
-    # image_rgb = tf.image.convert_image_dtype(image_rgb, tf.uint8, saturate=True)
-    # image = image_rgb[:, :, :, ::-1]
+    image_rgb = image[:, :, :, ::-1]
+    image_rgb = tf.image.convert_image_dtype(image_rgb, tf.float32)
+    image_hsv = tf.image.rgb_to_hsv(image_rgb)
+    img_stack = [tf.unstack(i, axis = 2) for i in tf.unstack(image_hsv, axis = 0)]
+    stack_mod = [tf.stack([x[0] + tf.random_uniform([1], minval = -rng, maxval = rng),
+                           x[1] + tf.random_uniform([1], minval = -rng, maxval = rng),
+                           x[2] + tf.random_uniform([1], minval = -rng, maxval = rng)]
+                          ,axis = 2) for x in img_stack]
+
+    image_rgb = tf.image.hsv_to_rgb(tf.stack(stack_mod))
+    image_rgb = tf.image.convert_image_dtype(image_rgb, tf.uint8, saturate=True)
+    image = image_rgb[:, :, :, ::-1]
 
     # Creates batches by randomly shuffling tensors. each training example is (image,velocity) pair
     if shuffle:
-        images, angles, velocities, endeffector_poses, next_endeffector_poses, use_frames, final_endeffector_poses = \
-            tf.train.shuffle_batch([image, angle, velocity, endeffector_pos, next_endeffector_pos, use_frame, final_endeffector_pos],
+        images, angles, velocities, endeffector_poses, use_frames, final_endeffector_poses = \
+            tf.train.shuffle_batch([image, angle, velocity, endeffector_pos, use_frame, final_endeffector_pos],
                                    batch_size=30, capacity=3000, num_threads=30,
                                    min_after_dequeue=900, enqueue_many=True)
     else:
-        images, angles, velocities, endeffector_poses, next_endeffector_poses, use_frames, final_endeffector_poses = \
-            tf.train.batch([image, angle, velocity, endeffector_pos, next_endeffector_pos, use_frame, final_endeffector_pos],
+        images, angles, velocities, endeffector_poses, use_frames, final_endeffector_poses = \
+            tf.train.batch([image, angle, velocity, endeffector_pos, use_frame, final_endeffector_pos],
                                    batch_size=30, capacity=3000, num_threads=30, enqueue_many=True)
-    return images, angles, velocities, endeffector_poses, next_endeffector_poses, use_frames, final_endeffector_poses
+    return images, angles, velocities, endeffector_poses, use_frames, final_endeffector_poses
 
 
 def main():
