@@ -6,7 +6,7 @@ import cv2
 import os
 import cPickle
 import glob
-import matplotlib.pyplot as plt
+from ee_velocity_compute import EE_Calculator
 FLAGS = flags.FLAGS
 flags.DEFINE_string('data_path', './', 'path to trajectory folders')
 flags.DEFINE_string('out_path', './', 'output file directory')
@@ -88,6 +88,7 @@ def write_tf_records(images, angles, velocities, ef_poses, filepath):
 
 
 def main():
+    calc = EE_Calculator()
     data_path = FLAGS.data_path
     out_path = FLAGS.out_path
     groups = [x for x in os.listdir(data_path) if 'traj_group' in x]
@@ -123,11 +124,28 @@ def main():
             endeffector_pos = sawyer_data['endeffector_pos']
 
 
+            out_velocities = np.zeros((joint_velocities.shape[0], 13), np.float32)
+            out_ef = np.zeros((endeffector_pos.shape[0], 7), np.float32)
+
+            for i in range(endeffector_pos.shape[0]):
+                ja = joint_angles[i, :]
+                jv = joint_velocities[i, :]
+                out_velocities[i, :7] = jv
+
+                jac = calc.jacobian(ja)
+
+                ee_velocity = jac.dot(jv.reshape((-1, 1)))
+                ee_pose = calc.forward_position_kinematics(ja)
+
+                out_ef[i, :]  = ee_pose
+                out_velocities[i, 7:] = ee_velocity.reshape(-1)
+
             stacked = np.stack(traj_images, axis = 0)
+
             images.append(stacked)
             angles.append(joint_angles)
-            velocities.append(joint_velocities)
-            ef_poses.append(endeffector_pos)
+            velocities.append(out_velocities)
+            ef_poses.append(out_ef)
 
         write_tf_records(images, angles, velocities, ef_poses, group_out)
 

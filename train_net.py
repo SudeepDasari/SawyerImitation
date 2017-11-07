@@ -64,22 +64,24 @@ def main():
     NUM_ITERS = 100000
 
     with tf.variable_scope('model', reuse=None) as training_scope:
-        images_batch, angles_batch, actions_batch, endeffector_poses_batch, use_frames_batch, \
-            final_endeffector_poses_batch = read_tf_record(data_path + 'train.tfrecords')
 
-        robot_configs_batch = tf.concat([angles_batch, endeffector_poses_batch], 1)
 
-        model = Model(vgg19_path, images_batch, robot_configs_batch, actions_batch, use_frames_batch,
-                      final_endeffector_poses_batch)
+        images, angles, joint_velocity, endeffector_poses, end_effector_velocity, use_frames, \
+            final_endeffector_poses = read_tf_record(data_path + 'train.tfrecords')
+
+        robot_configs_batch = tf.concat([angles, endeffector_poses], 1)
+
+        model = Model(vgg19_path, images, robot_configs_batch, end_effector_velocity, use_frames,
+                      final_endeffector_poses)
 
     with tf.variable_scope('val_model', reuse=None):
-        val_images_batch, val_angles_batch, val_actions_batch, val_endeffector_poses_batch, val_use_frames_batch, \
-        val_final_endeffector_poses_batch = read_tf_record(data_path + 'test.tfrecords', d_append='test', rng=0)
+        val_images, val_angles, val_joint_velocities, val_endeffector_poses, val_endeffector_vel, \
+        val_use_frames, val_final_eeps = read_tf_record(data_path + 'test.tfrecords', d_append='test', rng=0)
 
-        val_robot_configs_batch = tf.concat([val_angles_batch, val_endeffector_poses_batch], 1)
+        val_robot_configs_batch = tf.concat([val_angles, val_endeffector_poses], 1)
 
-        val_model = Model(vgg19_path, val_images_batch, val_robot_configs_batch, val_actions_batch, val_use_frames_batch,
-                      val_final_endeffector_poses_batch, training_scope)
+        val_model = Model(vgg19_path, val_images, val_robot_configs_batch, val_endeffector_vel, val_use_frames,
+                          val_final_eeps, training_scope)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
     # Make training session.

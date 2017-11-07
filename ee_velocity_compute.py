@@ -51,88 +51,43 @@ class EE_Calculator:
         return np.array([pos[0], pos[1], pos[2],
                          rot[0], rot[1], rot[2], rot[3]])
 
-calc = EE_Calculator()
-#print calc.jacobian(np.zeros(7)).shape
 
 
-# demo_dict = pkl.load(open(os.path.expanduser('~/oneshot_demos_10_24/robot/demo1.pkl'), 'rb'))
-# states = demo_dict['demoX']
-# actions = demo_dict['demoU']
-#
-# ja_1 = states[0, 0, 1, :7]
-# ja_2 = states[0, 0, 2, :7]
-#
-# jv_1 = actions[0, 0, 1, :]
-# jv_2 = actions[0, 0, 2, :]
-#
-# ee_position1 = calc.forward_position_kinematics(ja_1)
-# ee_position2 = calc.forward_position_kinematics(ja_2)
-#
-# print 'ee_vel diff', (ee_position2 - ee_position1) * 20.
-# print 'ee_vel calc 1', calc.jacobian(ja_1).dot(jv_1.reshape((-1, 1)))
-# print 'ee_vel calc 2', calc.jacobian(ja_2).dot(jv_2.reshape((-1, 1)))
-#
-# print 'ee_pos1', ee_position2[:3]
-# print 'ee_pos1 rec', states[0, 0, 2, 7:]
-#
-# import matplotlib.pyplot as plt
-#
-# plot_vel = np.zeros(40)
-#
-# for i in range(40):
-#     ja_fr = states[0, 0, i, :7]
-#     jv_fr = actions[0, 0, i, :]
-#     plot_vel[i] = calc.jacobian(ja_fr).dot(jv_fr.reshape((-1, 1)))[4]
-# plt.plot(plot_vel)
-#
-# plt.figure()
-#
-# plot_vel = np.zeros(39)
-#
-# for i in range(39):
-#     ja_fr = states[0, 0, i, :7]
-#     ja_fr_plus = states[0, 0, i + 1, :7]
-#
-#     ee_fr = calc.forward_position_kinematics(ja_fr)[4]
-#     ee_fr_plus = calc.forward_position_kinematics(ja_fr_plus)[4]
-#     # print (ee_fr_plus - ee_fr)
-#     plot_vel[i] = (ee_fr_plus - ee_fr) * 20.
-# plt.plot(plot_vel)
-# plt.show()
+if __name__ == '__main__':
+    calc = EE_Calculator()
+    in_append = os.path.expanduser('~/oneshot_demos_10_24/')
+    out_append = os.path.expanduser('~/oneshot_demos_eemod_10_24/')
 
-in_append = os.path.expanduser('~/oneshot_demos_10_24/')
-out_append = os.path.expanduser('~/oneshot_demos_eemod_10_24/')
+    N_TO_CONVERT = 162
+    for c in ['human', 'robot']:
+        for file_num in range(N_TO_CONVERT):
+            in_path = in_append + c + '/demo' + str(file_num) + '.pkl'
+            out_path = out_append + c + '/demo' + str(file_num) + '.pkl'
 
-N_TO_CONVERT = 162
-for c in ['human', 'robot']:
-    for file_num in range(N_TO_CONVERT):
-        in_path = in_append + c + '/demo' + str(file_num) + '.pkl'
-        out_path = out_append + c + '/demo' + str(file_num) + '.pkl'
+            in_dict = pkl.load(open(in_path, 'rb'))
+            states = in_dict['demoX']
+            actions = in_dict['demoU']
 
-        in_dict = pkl.load(open(in_path, 'rb'))
-        states = in_dict['demoX']
-        actions = in_dict['demoU']
+            samp_dim, demo_dim, time_dim = states.shape[:3]
 
-        samp_dim, demo_dim, time_dim = states.shape[:3]
+            #output ja, eep
+            #output jv, ee velocities
+            out_states = np.zeros((samp_dim, demo_dim, time_dim, 14))
+            out_actions = np.zeros((samp_dim, demo_dim, time_dim, 13))
 
-        #output ja, eep
-        #output jv, ee velocities
-        out_states = np.zeros((samp_dim, demo_dim, time_dim, 14))
-        out_actions = np.zeros((samp_dim, demo_dim, time_dim, 13))
+            for i in range(samp_dim):
+                for j in range(demo_dim):
+                    for k in range(time_dim):
+                        ja_fr = states[i, j, k, :7]
+                        jv_fr = actions[i, j, k, :]
 
-        for i in range(samp_dim):
-            for j in range(demo_dim):
-                for k in range(time_dim):
-                    ja_fr = states[i, j, k, :7]
-                    jv_fr = actions[i, j, k, :]
+                        out_states[i, j, k, :7] = ja_fr
+                        out_states[i, j, k, 7:] = calc.forward_position_kinematics(ja_fr)
 
-                    out_states[i, j, k, :7] = ja_fr
-                    out_states[i, j, k, 7:] = calc.forward_position_kinematics(ja_fr)
+                        out_actions[i, j, k, :7] = jv_fr
+                        ee_velocity = calc.jacobian(ja_fr).dot(jv_fr.reshape((-1, 1)))
+                        out_actions[i, j, k, 7:] = ee_velocity.reshape(-1)
 
-                    out_actions[i, j, k, :7] = jv_fr
-                    ee_velocity = calc.jacobian(ja_fr).dot(jv_fr.reshape((-1, 1)))
-                    out_actions[i, j, k, 7:] = ee_velocity.reshape(-1)
-
-        out_dict = {'demoX':out_states, 'demoU':out_actions}
-        pkl.dump(out_dict, open(out_path, 'wb'))
-        print 'for type', c, 'converted obj dict:', file_num
+            out_dict = {'demoX':out_states, 'demoU':out_actions}
+            pkl.dump(out_dict, open(out_path, 'wb'))
+            print 'for type', c, 'converted obj dict:', file_num

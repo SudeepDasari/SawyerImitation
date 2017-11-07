@@ -60,18 +60,18 @@ class ImitationLearningModel:
             # print 'configs', self.robot_configs
 
 
-            self.predicted_eeps = slim.layers.fully_connected(fp_flat, 3, scope='predicted_eeps', activation_fn=None)  # dim of eeps: 3
+            self.predicted_eeps = slim.layers.fully_connected(fp_flat, 7, scope='predicted_eeps', activation_fn=None)  # dim of eeps: 3
 
 
             conv_out = tf.concat([fp_flat,
-                                  self.robot_configs,  # dim of angles: 7, dim of eeps: 3
+                                  self.robot_configs,  # dim of angles: 7, dim of eeps: 7
                                   self.predicted_eeps],
                                  1)
 
             fc_layer1 = slim.layers.fully_connected(conv_out, 100, scope='fc1')
 
 
-            self.predicted_actions = slim.layers.fully_connected(fc_layer1, 7, scope='predicted_actions', activation_fn=None)  # dim of velocities: 7
+            self.predicted_actions = slim.layers.fully_connected(fc_layer1, 6, scope='predicted_actions', activation_fn=None)  # dim of velocities: 7
 
 
 
