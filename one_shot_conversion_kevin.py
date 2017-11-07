@@ -6,13 +6,13 @@ import moviepy.editor as mpy
 import imageio
 import cPickle as pkl
 import random
-data_dir = '~/demonstration_10_24/'
-data_out = '~/oneshot_demos_10_24/'
+data_dir = '~/demo_test_11_3/'
+data_out = '~/recordings_test2/'
 collector = ['human', 'robot']
-IN_T = 60
+IN_T = 40
 OUT_T = 40
-TRAJ_PER_OBJ = 8
-SAMPLES = 5
+TRAJ_PER_OBJ = 1
+SAMPLES = 1
 
 for c in collector:
     base_path = os.path.expanduser(data_dir + c+'/')

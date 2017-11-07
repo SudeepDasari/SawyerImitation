@@ -35,7 +35,7 @@ from recorder.demo_recorder import DemoRobotRecorder
 
 
 class Pushback_Recorder(object):
-    N_SAMPLES = 60
+    N_SAMPLES = 40
 
     def __init__(self, file=None):
         """

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-import tensorflow as tf
+
 import numpy as np
-import argparse
+
 import rospy
 import pdb
 from intera_interface import CHECK_VERSION
@@ -11,14 +11,13 @@ from tensorflow.python.platform import flags
 import matplotlib.pyplot as plt
 import pdb
 import moviepy.editor as mpy
-
 from robot_controller import RobotController
 from recorder.robot_recorder import RobotRecorder
-from setup_predictor import setup_predictor
+from setup_predictor import setup_MAML_predictor_human as setup_predictor
 import cv2
 
-class SawyerImitation(object):
-    def __init__(self, model_path, vgg19_path):
+class SawyerOneShot(object):
+    def __init__(self, meta_path, norm_path, recording_path):
         self.ctrl = RobotController()
 
         self.recorder = RobotRecorder(save_dir='',
@@ -29,34 +28,34 @@ class SawyerImitation(object):
                                       save_images=False)
 
         self.action_interval = 20 #Hz
-        self.action_sequence_length = 60
+        self.action_sequence_length = 40
 
         self.traj_duration = self.action_sequence_length * self.action_interval
         self.action_rate = rospy.Rate(self.action_interval)
         self.control_rate = rospy.Rate(20)
-        self.predictor = setup_predictor(model_path, vgg19_path)
+        self.predictor = setup_predictor(meta_path, norm_path, recording_path)
         self.save_ctr = 0
         self.ctrl.set_neutral()
         self.s = 0
 
     def query_action(self):
-        image = cv2.resize(self.recorder.ltob.img_cv2[:-150,275:-150,:], (224, 224), interpolation=cv2.INTER_AREA)
+        image = cv2.resize(self.recorder.ltob.img_cv2[:-150, 225:-225, :], (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1]
 
         robot_configs = np.concatenate((self.recorder.get_joint_angles(), self.recorder.get_endeffector_pos()))
 
         if image is None or robot_configs is None:
             return None
 
-        action, predicted_eep = self.predictor(image, robot_configs)
+        action = self.predictor(image, robot_configs)
         self.img_stack.append(image)
 
         self.s += 1
         # if self.s <=5:
         #     action[np.abs(action) < 0.05] *= 15
 
-        # print 'action vector: ', action
+        print 'action vector: ', action
         # print 'predicted end effector pose: ', predicted_eep
-        return action, predicted_eep
+        return action
 
     def apply_action(self, action):
         try:
@@ -79,11 +78,7 @@ class SawyerImitation(object):
         actions = []
         while step < self.action_sequence_length:
             self.control_rate.sleep()
-            action, predicted_eep = self.query_action()
-            if step == 0:
-                print 'predicted eep', predicted_eep
-                print 'diff sqd', np.sum(np.power(predicted_eep - self.start, 2))
-                print 'diff dim', np.abs(predicted_eep - self.start)
+            action = self.query_action()
 
             action_dict = dict(zip(self.ctrl.joint_names, action))
             # for i in range(len(self.ctrl.joint_names)):
@@ -94,13 +89,19 @@ class SawyerImitation(object):
 
             step += 1
         print 'end', self.recorder.get_endeffector_pos()
-        clip = mpy.ImageSequenceClip([cv2.cvtColor(i, cv2.COLOR_BGR2RGB) for i in self.img_stack], fps=20)
+        clip = mpy.ImageSequenceClip([i for i in self.img_stack], fps=20)
         clip.write_gif('test_frames.gif')
+
+
 
 if __name__ == '__main__':
     # FLAGS = flags.FLAGS
     # flags.DEFINE_string('model_path', './', 'path to output model/stats')
     # flags.DEFINE_string('vgg19_path', './', 'path to npy file')
-    d = SawyerImitation('model_11_1/l1_100_75_augment/modelfinal', 'out/')
-    pdb.set_trace()
-    d.run_trajectory()
+
+    recording_path = '~/demos_test0/human/object2/'
+    d = SawyerOneShot('place_sawyer_maml_human/place_sawyer_maml_human_act_ee_2_32_10x1_1d_conv_50k.meta',
+                      'place_sawyer_maml_human/scale_and_bias_place_sawyer_human.pkl', recording_path)
+    while True:
+        pdb.set_trace()
+        d.run_trajectory()
