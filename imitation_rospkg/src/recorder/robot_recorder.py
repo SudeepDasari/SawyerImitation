@@ -438,10 +438,13 @@ class RobotRecorder(object):
         except (rospy.ServiceException, rospy.ROSException), e:
             rospy.logerr("Service call failed: %s" % (e,))
             return False
-
         pos = np.array([resp.pose_stamp[0].pose.position.x,
                         resp.pose_stamp[0].pose.position.y,
-                        resp.pose_stamp[0].pose.position.z])
+                        resp.pose_stamp[0].pose.position.z,
+                        resp.pose_stamp[0].pose.orientation.x,
+                        resp.pose_stamp[0].pose.orientation.y,
+                        resp.pose_stamp[0].pose.orientation.z,
+                        resp.pose_stamp[0].pose.orientation.w])
         return pos
 
     def get_joint_angles(self):

@@ -42,7 +42,7 @@ class SawyerImitation(object):
     def query_action(self):
         image = cv2.resize(self.recorder.ltob.img_cv2[:-150,275:-150,:], (224, 224), interpolation=cv2.INTER_AREA)
 
-        robot_configs = np.concatenate((self.recorder.get_joint_angles(), self.recorder.get_endeffector_pos()))
+        robot_configs = np.concatenate((self.recorder.get_joint_angles(), self.recorder.get_endeffector_pos()[:3]))
 
         if image is None or robot_configs is None:
             return None
@@ -70,7 +70,7 @@ class SawyerImitation(object):
             rospy.sleep(.5)
 
     def run_trajectory(self):
-        self.start = self.recorder.get_endeffector_pos()
+        self.start = self.recorder.get_endeffector_pos()[:3]
         print 'actual end eep', self.start
         self.ctrl.set_neutral()
         self.img_stack = []
@@ -101,6 +101,6 @@ if __name__ == '__main__':
     # FLAGS = flags.FLAGS
     # flags.DEFINE_string('model_path', './', 'path to output model/stats')
     # flags.DEFINE_string('vgg19_path', './', 'path to npy file')
-    d = SawyerImitation('model_11_1/l1_100_75_augment/modelfinal', 'out/')
+    d = SawyerImitation('models/l1_100_75_augment/modelfinal', 'data/')
     pdb.set_trace()
     d.run_trajectory()
