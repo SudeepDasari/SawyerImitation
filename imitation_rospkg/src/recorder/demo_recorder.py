@@ -39,6 +39,13 @@ class Latest_observation(object):
         self.tstamp_d_img = None  # timestamp of image
         self.d_img_msg = None
 
+        #cam0
+        self.cam0_img_cv2 = None
+        self.tstamp_cam0 = None
+
+        #cam1
+        self.cam1_img_cv2 = None
+        self.tstamp_cam1 = None
 
 class DemoRobotRecorder(object):
     def __init__(self, save_dir, seq_len = None, use_aux=True, save_video=False,
@@ -89,6 +96,8 @@ class DemoRobotRecorder(object):
 
         rospy.Subscriber(prefix + "/kinect2/hd/image_color", Image_msg, self.store_latest_im)
         rospy.Subscriber(prefix + "/kinect2/sd/image_depth_rect", Image_msg, self.store_latest_d_im)
+        rospy.Subscriber( '/camera0/usb_cam0/image_raw', Image_msg, self.store_latest_cam0)
+        rospy.Subscriber( '/camera1/usb_cam1/image_raw', Image_msg, self.store_latest_cam1)
 
         self.save_dir = save_dir
         self.ltob = Latest_observation()
@@ -192,6 +201,21 @@ class DemoRobotRecorder(object):
         self.ltob.img_cv2 = self.crop_highres(cv_image)
         self.ltob.img_cropped = self.crop_lowres(cv_image)
 
+    def store_latest_cam0(self, data):
+        self.ltob.img_msg = data
+        cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")  # (1280, 720)
+
+        self.ltob.cam0_img_cv2 = cv_image
+        self.ltob.tstamp_cam0 = rospy.get_time()
+
+    def store_latest_cam1(self, data):
+        self.ltob.img_msg = data
+        cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")  # (1280, 720)
+
+        self.ltob.cam1_img_cv2 = cv_image
+        self.ltob.tstamp_cam1 = rospy.get_time()
+
+
     def crop_highres(self, cv_image):
         startcol = 180
         startrow = 0
@@ -262,6 +286,8 @@ class DemoRobotRecorder(object):
                 raise ValueError("trajectory {} already exists".format(traj_folder))
         if not os.path.exists(self.image_folder):
             os.makedirs(self.image_folder)
+            os.makedirs(self.image_folder+'/cam0')
+            os.makedirs(self.image_folder + '/cam1')
         if not os.path.exists(self.depth_image_folder):
             os.makedirs(self.depth_image_folder)
 
@@ -380,6 +406,17 @@ class DemoRobotRecorder(object):
 
         #saving image
         # saving the full resolution image
+        if self.ltob.cam0_img_cv2 is not None:
+            image_name = self.image_folder +'/cam0/' + pref + "_full_cam0_im{0}".format(str(i_save).zfill(2))
+            image_name += "_time{0}.jpg".format(self.ltob.tstamp_cam0)
+
+            cv2.imwrite(image_name, self.ltob.cam0_img_cv2, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+        if self.ltob.cam1_img_cv2 is not None:
+            image_name = self.image_folder + '/cam1/' + pref + "_full_cam1_im{0}".format(str(i_save).zfill(2))
+            image_name += "_time{0}.jpg".format(self.ltob.tstamp_cam1)
+
+            cv2.imwrite(image_name, self.ltob.cam1_img_cv2, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+
         if self.ltob.img_cv2 is not None:
             image_name = self.image_folder+ "/" + pref + "_full_cropped_im{0}".format(str(i_save).zfill(2))
             image_name += "_time{0}.jpg".format(self.ltob.tstamp_img)

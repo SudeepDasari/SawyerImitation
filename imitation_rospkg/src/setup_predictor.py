@@ -6,6 +6,8 @@ import cv2
 import time
 import cPickle as pickle
 import moviepy.editor as mpy
+import glob
+from ee_velocity_compute import EE_Calculator
 
 def setup_predictor_ee_control(model_path, vgg19_path):
     from imitation_learning6 import ImitationLearningModel as ImitationLearningModelEE
@@ -39,7 +41,7 @@ def setup_predictor_ee_control(model_path, vgg19_path):
             configs_pl: feed_config
         }
 
-        predicted_actions, predicted_eeps = sess.run([model.predicted_actions, model.predicted_eeps], feed_dict)
+        predicted_actions, predicted_eeps, img = sess.run([model.predicted_actions, model.predicted_eeps, model.images], feed_dict)
         # print 'fp_x', fp_x
         # print 'fp_y', fp_y
         # height, width = images.shape[:2]
@@ -47,7 +49,7 @@ def setup_predictor_ee_control(model_path, vgg19_path):
         # for i in range(32):
         #     cv2.circle(drawn, (int(height * (fp_x[i] + 0.5)) , int(width * (fp_y[i] + 0.5))), 5, (0, 0, 255), -1)
 
-        return predicted_actions[0], predicted_eeps[0]
+        return predicted_actions[0], predicted_eeps[0], img
 
     return predictor_func
 
@@ -110,9 +112,7 @@ def load_video_ref(imagea, imageb, statea, actiona, stateb, scale, bias, T=40):
    actiona = actiona.reshape((1, T, -1))
    statea = statea.reshape((1, T, -1))
    stateb = stateb.reshape((1, 1, -1))
-   final_eepta = np.tile(np.expand_dims(statea[:, -1, 7:9], axis=1), [1, T, 1])
    #final_eepta = np.tile(statea[:, -1, 7:], axis=1), [1, T, 1])
-   actiona = np.concatenate((actiona, final_eepta), axis=2)
    statea = statea.dot(scale) + bias
    stateb = stateb.dot(scale) + bias
    return imagea, imageb, statea, stateb, actiona
@@ -134,6 +134,45 @@ def load_video_ref_human(imagea, imageb, stateb, scale, bias, T=40):
 
 
 def setup_MAML_predictor(meta_path, norm_path, recording_path):
+    print 'loading images'
+    imgs = glob.glob(recording_path + '/images/*.jpg')
+    imgs.sort(key=lambda x: int(x.split('_im')[1][:2]))
+
+    image_a = np.stack([cv2.resize(cv2.imread(i)[:-150, 150:-275, :], (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1] for i in
+            imgs], axis = 0)
+    for i in image_a:
+        cv2.imshow('img', i[:, :, ::-1])
+        cv2.waitKey(100)
+
+    print 'loaded images', image_a.shape
+
+    pkl_path = glob.glob(recording_path + '/*.pkl')[0]
+    rec_dict = pickle.load(open(pkl_path, 'rb'))
+
+    traj_angles = rec_dict['jointangles']
+    traj_vels = rec_dict['jointvelocities']
+    traj_efs = rec_dict['endeffector_pos']
+
+
+    print 'loaded input angles', traj_angles.shape, 'vels', traj_vels.shape, 'efs', traj_efs.shape
+    calc = EE_Calculator()
+    traj_ee_pos = np.zeros((traj_angles.shape[0], 7))
+    traj_ee_velocity = np.zeros((traj_angles.shape[0], 6))
+    for i in range(traj_angles.shape[0]):
+        traj_ee_pos[i, :] = calc.forward_position_kinematics(traj_angles[i, :])
+        traj_ee_velocity[i, :] = calc.jacobian(traj_angles[i]).dot(traj_vels[i].reshape((-1, 1))).reshape(-1)
+
+    print 'ee vel', traj_ee_velocity.shape
+    print 'ee pos', traj_ee_pos.shape
+    final_ee = np.tile(traj_efs[-1, :2], (40, 1))
+    print 'final_ee', final_ee.shape
+
+    record_state = traj_ee_pos
+    record_action = np.concatenate((traj_ee_velocity[:, :3], final_ee), axis = 1)
+
+    print 'record_state', record_state.shape
+    print 'record_action', record_action.shape
+
     meta_path = os.path.expanduser(meta_path)
     norm_path = os.path.expanduser(norm_path)
     recording_path = os.path.expanduser(recording_path)
@@ -156,12 +195,10 @@ def setup_MAML_predictor(meta_path, norm_path, recording_path):
     stateb = tf.get_default_graph().get_tensor_by_name('stateb:0')
     #
     output = tf.get_default_graph().get_tensor_by_name('output_action:0')
+    output_f_ee = tf.get_default_graph().get_tensor_by_name('final_ee:0')
     print 'got tensors'
-    rec_dict = pickle.load(open(recording_path + 'states.pkl', 'rb'))
-    record_state =  rec_dict['demoX'] # get from pickle
-    record_action = rec_dict['demoU'] #get from pickle
+    print 'final_ee', output_f_ee
 
-    print 'loaded input state', record_state.shape, 'actions', record_action.shape
 
     with open(norm_path, 'rb') as f:
         res = pickle.load(f)
@@ -169,27 +206,25 @@ def setup_MAML_predictor(meta_path, norm_path, recording_path):
 
         bias = res['bias']
     print 'loaded scale', scale.shape, 'bias', bias.shape
-    clip = mpy.VideoFileClip(recording_path + 'record.gif')
-    image_a = np.stack([fr for fr in clip.iter_frames()], axis = 0)[:40, :, :, :3]
-    print 'loaded img gif', image_a.shape
+
 
     def predictor_func(imageb, robot_state):
             img_a, img_b, state_a, state_b, action_a = load_video_ref(image_a, imageb, record_state, record_action, robot_state,
                                                                       scale, bias)
-            #1x40x(100*100*3)
-            print 'obsa', img_a.shape
-            #1 x 1 x (100*100*3)
-            print 'obsb', img_b.shape
-            #1 x 40 x 10
-            print 'statea', state_a.shape
-            # 1 x 1 x 10
-            print 'stateb', state_b.shape
-            #1 x 40 x 9
-            print 'actiona', action_a.shape
-            # print XD
-            pred_actions = sess.run([output], feed_dict={obsa: img_a, obsb: img_b, statea: state_a, stateb: state_b,
-                                                        actiona: action_a})[0].reshape(-1)
-            return pred_actions
+            # #1x40x(100*100*3)
+            # print 'obsa', img_a.shape
+            # #1 x 1 x (100*100*3)
+            # print 'obsb', img_b.shape
+            # #1 x 40 x 10
+            # print 'statea', state_a.shape
+            # # 1 x 1 x 10
+            # print 'stateb', state_b.shape
+            # #1 x 40 x 9
+            # print 'actiona', action_a.shape
+            # # print XD
+            pred_actions, f_ee = sess.run([output, output_f_ee], feed_dict={obsa: img_a, obsb: img_b, statea: state_a, stateb: state_b,
+                                                        actiona: action_a})
+            return pred_actions.reshape(-1), f_ee.reshape(-1)
 
     return predictor_func
 

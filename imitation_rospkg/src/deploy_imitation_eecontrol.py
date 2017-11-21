@@ -36,7 +36,7 @@ class SawyerImitation(object):
                                       save_images=False)
 
         self.action_interval = 10 #Hz
-        self.action_sequence_length = 80
+        self.action_sequence_length = 60
 
         self.control_rate = rospy.Rate(self.action_interval)
         self.predictor = setup_predictor(model_path, vgg19_path)
@@ -56,15 +56,16 @@ class SawyerImitation(object):
         # rospy.sleep(.2)
 
     def query_action(self, robot_configs):
-        image = cv2.resize(self.recorder.ltob.img_cv2[:-150,275:-150,:], (224, 224), interpolation = cv2.INTER_AREA)
+        image = cv2.resize(self.recorder.ltob.img_cv2[:-150,150:-275,:], (224, 224), interpolation = cv2.INTER_AREA)
 
 
 
         if image is None or robot_configs is None:
             return None
 
-        action, predicted_eep = self.predictor(image, robot_configs)
-        self.img_stack.append(image)
+        action, predicted_eep, image = self.predictor(image, robot_configs)
+
+        self.img_stack.append(image[0, :, :, :])
 
         self.s += 1
         # if self.s <=5:
@@ -133,6 +134,7 @@ class SawyerImitation(object):
         step = 0
         actions = []
         while step < self.action_sequence_length:
+            print step
             self.control_rate.sleep()
             current_eep = self.recorder.get_endeffector_pos()
             eep_diff_action, predicted_eep = self.query_action(current_eep)
@@ -151,6 +153,6 @@ if __name__ == '__main__':
     # FLAGS = flags.FLAGS
     # flags.DEFINE_string('model_path', './', 'path to output model/stats')
     # flags.DEFINE_string('vgg19_path', './', 'path to npy file')
-    d = SawyerImitation('pred_ee_diff_25extra/modelfinal', 'data/')
+    d = SawyerImitation('pred_diff_100_75_norm/modelfinal', 'data/')
     pdb.set_trace()
     d.run_trajectory()
