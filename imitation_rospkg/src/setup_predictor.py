@@ -232,6 +232,27 @@ def setup_MAML_predictor_human(meta_path, norm_path, recording_path):
     meta_path = os.path.expanduser(meta_path)
     norm_path = os.path.expanduser(norm_path)
     recording_path = os.path.expanduser(recording_path)
+
+    print 'loading images'
+    imgs = glob.glob(recording_path + '/images/*.jpg')
+    imgs.sort(key=lambda x: int(x.split('_im')[1][:2]))
+
+    image_a = np.stack(
+        [cv2.resize(cv2.imread(i)[:-150, 190:-235, :], (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1] for i in
+         imgs], axis=0)
+    for i in image_a:
+        cv2.imshow('img', i[:, :, ::-1])
+        cv2.waitKey(100)
+
+    print 'loaded images', image_a.shape
+
+    with open(norm_path, 'rb') as f:
+        res = pickle.load(f)
+        scale = res['scale']
+        bias = res['bias']
+        print 'from', norm_path, 'loaded scale', scale.shape, 'bias', bias.shape
+
+
     sess = tf.InteractiveSession()
     print 'made sess'
     saver = tf.train.import_meta_graph(meta_path)
@@ -247,18 +268,8 @@ def setup_MAML_predictor_human(meta_path, norm_path, recording_path):
     stateb = tf.get_default_graph().get_tensor_by_name('stateb:0')
     #
     output = tf.get_default_graph().get_tensor_by_name('output_action:0')
+    output_f_ee = tf.get_default_graph().get_tensor_by_name('final_ee:0')
     print 'got tensors'
-
-
-
-    with open(norm_path, 'rb') as f:
-        res = pickle.load(f)
-        scale = res['scale']
-        bias = res['bias']
-        print 'from', norm_path, 'loaded scale', scale.shape, 'bias', bias.shape
-    clip = mpy.VideoFileClip(recording_path + 'record.gif')
-    image_a = np.stack([fr for fr in clip.iter_frames()], axis = 0)[:40, :, :, :3]
-    print 'loaded img gif', image_a.shape
 
     def predictor_func(imageb, robot_state):
         #imagea, imageb, stateb
@@ -270,8 +281,8 @@ def setup_MAML_predictor_human(meta_path, norm_path, recording_path):
             # 1 x 1 x 10
             print 'stateb', state_b.shape
             # print XD
-            pred_actions = sess.run([output], feed_dict={obsa: img_a, obsb: img_b, stateb: state_b})[0].reshape(-1)
-            return pred_actions
+            pred_action, pred_final_ee = sess.run([output, output_f_ee], feed_dict={obsa: img_a, obsb: img_b, stateb: state_b})
+            return pred_action.reshape(-1), pred_final_ee.reshape(-1)
 
     return predictor_func
 

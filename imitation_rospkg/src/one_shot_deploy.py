@@ -13,7 +13,7 @@ import pdb
 import moviepy.editor as mpy
 from robot_controller import RobotController
 from recorder.robot_recorder import RobotRecorder
-from setup_predictor import setup_MAML_predictor as setup_predictor
+from setup_predictor import setup_MAML_predictor_human as setup_predictor
 import cv2
 import os
 from ee_velocity_compute import EE_Calculator
@@ -27,13 +27,15 @@ class Traj_aborted_except(Exception):
     pass
 
 class SawyerOneShot(object):
+    EE_STEPS = 1
+    ACTION_SEQUENCE_LENGTH = 5
+    SPRING_STIFF = 220
+
     def __init__(self, meta_path, norm_path, recording_path):
         self.ctrl = RobotController()
 
         self.recorder = RobotRecorder(save_dir='',
-                                      seq_len=60,
                                       use_aux=False,
-                                      save_video=True,
                                       save_actions=False,
                                       save_images=False)
 
@@ -53,10 +55,9 @@ class SawyerOneShot(object):
         self.move_netural()
 
         self.s = 0
-        self.calc = EE_Calculator()
 
     def query_action(self):
-        image = cv2.resize(self.recorder.ltob.img_cv2[:-150, 150:-275, :], (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1]
+        image = cv2.resize(self.recorder.ltob.img_cv2[:-150, 190:-235, :], (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1]
 
         robot_configs = self.recorder.get_endeffector_pos()
 
@@ -102,13 +103,13 @@ class SawyerOneShot(object):
 
 
 
-        # self.imp_ctrl_release_spring(70)
-        # self.move_with_impedance(des_joint_angles)
-        self.ctrl.set_joint_positions(des_joint_angles)
+        self.imp_ctrl_release_spring(self.SPRING_STIFF)
+        self.move_with_impedance_sec(des_joint_angles)
+        # self.ctrl.set_joint_positions(des_joint_angles)
 
     def move_with_impedance_sec(self, cmd, duration=2.):
         jointnames = self.ctrl.limb.joint_names()
-        prev_joint = [self.ctrl.limb.joint_angle(j) for j in jointnames]
+        prev_joint = np.array([self.ctrl.limb.joint_angle(j) for j in jointnames])
         new_joint = np.array([cmd[j] for j in jointnames])
 
         start_time = rospy.get_time()  # in seconds
@@ -138,9 +139,9 @@ class SawyerOneShot(object):
 
 
     def move_netural(self):
-        self.ctrl.set_neutral()
-        # self.imp_ctrl_release_spring(100.)
-        # self.set_neutral_with_impedance()
+        # self.ctrl.set_neutral()
+        self.imp_ctrl_release_spring(280)
+        self.set_neutral_with_impedance()
 
     def run_trajectory(self):
         self.start = self.recorder.get_endeffector_pos()
@@ -150,22 +151,14 @@ class SawyerOneShot(object):
 
         step = 0
         actions = []
-        current_eep = self.recorder.get_endeffector_pos()
-        eep_diff_action, pred_final = self.query_action()
-        current_eep[:2] = pred_final
-        self.move_to(current_eep[:3])
 
-        current_eep = self.recorder.get_endeffector_pos()
-        eep_diff_action, pred_final = self.query_action()
-        current_eep[:2] = pred_final
-        self.move_to(current_eep[:3])
+        for i in range(self.EE_STEPS):
+            current_eep = self.recorder.get_endeffector_pos()
+            eep_diff_action, pred_final = self.query_action()
+            current_eep[:2] = pred_final
+            self.move_to(current_eep[:3])
 
-        current_eep = self.recorder.get_endeffector_pos()
-        eep_diff_action, pred_final = self.query_action()
-        current_eep[:2] = pred_final
-        self.move_to(current_eep[:3])
-
-        while step < self.action_sequence_length:
+        while step < self.ACTION_SEQUENCE_LENGTH:
             self.control_rate.sleep()
             current_eep = self.recorder.get_endeffector_pos()
             print 'step', step
@@ -175,12 +168,13 @@ class SawyerOneShot(object):
 
             # print 'before', current_eep[:3]
             current_eep[:3] += 0.05 * eep_diff_action
-
+            current_eep[2] = max(current_eep[2], 0.2)
 
 
             self.move_to(current_eep[:3])
 
             step += 1
+
         print 'end', self.recorder.get_endeffector_pos()
         clip = mpy.ImageSequenceClip([i for i in self.img_stack], fps=20)
         clip.write_gif('test_frames.gif')
@@ -192,9 +186,9 @@ if __name__ == '__main__':
     # flags.DEFINE_string('model_path', './', 'path to output model/stats')
     # flags.DEFINE_string('vgg19_path', './', 'path to npy file')
 
-    recording_path = os.path.expanduser('~/oneshot_demos_eedif_nov_19/light_test/traj0/')
-    d = SawyerOneShot('model_2_with_ee/place_sawyer_maml_3_layers_200_dim_ee_2_layers_100_dim_clip30_kinect_view_both_28k.meta',
-                      'model_2_with_ee/scale_and_bias_place_sawyer_kinect_view_both.pkl', recording_path)
+    recording_path = os.path.expanduser('~/human_demos_nov/traj0/')
+    d = SawyerOneShot('to_test/model_human_maml/place_sawyer_maml_3_layers_200_dim_1d_conv_ee_3_32_act_2_32_20x1_filters_64_128_3x3_filters_human_light_68k.meta',
+                      'to_test/model_human_maml/scale_and_bias_place_sawyer_kinect_view_human.pkl', recording_path)
     while True:
         pdb.set_trace()
         d.run_trajectory()

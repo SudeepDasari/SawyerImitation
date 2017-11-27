@@ -16,6 +16,10 @@ from robot_controller import RobotController
 from recorder.robot_recorder import RobotRecorder
 from setup_predictor import setup_predictor
 import cv2
+import inverse_kinematics
+
+class Traj_aborted_except(Exception):
+    pass
 
 class SawyerImitation(object):
     def __init__(self, model_path, vgg19_path):
@@ -40,7 +44,7 @@ class SawyerImitation(object):
         self.s = 0
 
     def query_action(self):
-        image = cv2.resize(self.recorder.ltob.img_cv2[:-150,150:-275,:], (224, 224), interpolation=cv2.INTER_AREA)
+        image = cv2.resize(self.recorder.ltob.img_cv2[:-150,275:-170,:], (224, 224), interpolation=cv2.INTER_AREA)
 
         robot_configs = np.concatenate((self.recorder.get_joint_angles(), self.recorder.get_endeffector_pos()[:3]))
 
@@ -68,22 +72,47 @@ class SawyerImitation(object):
         if self.ctrl.limb.has_collided():
             rospy.logerr('collision detected!!!')
             rospy.sleep(.5)
+    def move_to(self, des_pos):
+        desired_pose = inverse_kinematics.get_pose_stamped(des_pos[0],
+                                                           des_pos[1],
+                                                           des_pos[2],
+                                                           inverse_kinematics.EXAMPLE_O)
+        start_joints = self.ctrl.limb.joint_angles()
+        try:
+            des_joint_angles = inverse_kinematics.get_joint_angles(desired_pose, seed_cmd=start_joints,
+                                                                   use_advanced_options=True)
+        except ValueError:
+            rospy.logerr('no inverse kinematics solution found, '
+                         'going to reset robot...')
+            current_joints = self.ctrl.limb.joint_angles()
+            self.ctrl.limb.set_joint_positions(current_joints)
+            raise Traj_aborted_except('raising Traj_aborted_except')
 
+        # self.move_with_impedance(des_joint_angles)
+        self.ctrl.set_joint_positions(des_joint_angles)
     def run_trajectory(self):
-        self.start = self.recorder.get_endeffector_pos()[:3]
-        print 'actual end eep', self.start
+        start = self.recorder.get_endeffector_pos()[:3]
+        # print 'actual end eep', self.start
         self.ctrl.set_neutral()
         self.img_stack = []
 
         step = 0
         actions = []
+
+        action, predicted_eep = self.query_action()
+        print 'predicted eep', predicted_eep[:2]
+        # print 'diff sqd', np.sum(np.power(predicted_eep - start, 2))
+        # print 'diff dim', np.abs(predicted_eep - start)
+
+        start[:2] = predicted_eep[:2]
+
+        self.move_to(start)
+
+
         while step < self.action_sequence_length:
             self.control_rate.sleep()
             action, predicted_eep = self.query_action()
-            if step == 0:
-                print 'predicted eep', predicted_eep
-                print 'diff sqd', np.sum(np.power(predicted_eep - self.start, 2))
-                print 'diff dim', np.abs(predicted_eep - self.start)
+
 
             action_dict = dict(zip(self.ctrl.joint_names, action))
             # for i in range(len(self.ctrl.joint_names)):
@@ -102,5 +131,6 @@ if __name__ == '__main__':
     # flags.DEFINE_string('model_path', './', 'path to output model/stats')
     # flags.DEFINE_string('vgg19_path', './', 'path to npy file')
     d = SawyerImitation('imitation_models/l1_100_75_augment/modelfinal', 'data/')
-    pdb.set_trace()
-    d.run_trajectory()
+    while True:
+        pdb.set_trace()
+        d.run_trajectory()

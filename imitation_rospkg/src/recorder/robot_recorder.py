@@ -46,7 +46,7 @@ class Latest_observation(object):
 
 
 class RobotRecorder(object):
-    def __init__(self, save_dir, seq_len = None, use_aux=True, save_video=False,
+    def __init__(self, save_dir, seq_len = None, use_aux=True,
                  save_actions=True, save_images = True):
 
         self.save_actions = save_actions
@@ -66,14 +66,8 @@ class RobotRecorder(object):
         self.overwrite = True
         self.use_aux = use_aux
 
-        if save_video:
-            self.save_gif = True
-        else:
-            self.save_gif = False
-
         self.image_folder = save_dir
         self.itr = 0
-        self.highres_imglist = []
 
         if __name__ !=  '__main__':
             # the main instance one also records actions and joint angles
@@ -168,27 +162,27 @@ class RobotRecorder(object):
             # ))
 
         self.ltob.tstamp_d_img = rospy.get_time()
-
+        #
         self.ltob.d_img_msg = data
-        cv_image = self.bridge.imgmsg_to_cv2(data, '16UC1')
-
-        self.ltob.d_img_raw_npy = np.asarray(cv_image)
-        img = cv2.resize(cv_image, (0, 0), fx=1 /5.5, fy=1 / 5.5, interpolation=cv2.INTER_AREA)
-
-        img = np.clip(img,0, 1400)
-
-        startcol = 7
-        startrow = 0
-        endcol = startcol + 64
-        endrow = startrow + 64
-        #crop image:
-        img = img[startrow:endrow, startcol:endcol]
-
-        self.ltob.d_img_cropped_npy = img
-        img = img.astype(np.float32)/ np.max(img) *256
-        img = img.astype(np.uint8)
-        img = np.squeeze(img)
-        self.ltob.d_img_cropped_8bit = img
+        # cv_image = self.bridge.imgmsg_to_cv2(data, '16UC1')
+        #
+        # self.ltob.d_img_raw_npy = np.asarray(cv_image)
+        # img = cv2.resize(cv_image, (0, 0), fx=1 /5.5, fy=1 / 5.5, interpolation=cv2.INTER_AREA)
+        #
+        # img = np.clip(img,0, 1400)
+        #
+        # startcol = 7
+        # startrow = 0
+        # endcol = startcol + 64
+        # endrow = startrow + 64
+        # #crop image:
+        # img = img[startrow:endrow, startcol:endcol]
+        #
+        # self.ltob.d_img_cropped_npy = img
+        # img = img.astype(np.float32)/ np.max(img) *256
+        # img = img.astype(np.uint8)
+        # img = np.squeeze(img)
+        # self.ltob.d_img_cropped_8bit = img
 
 
     def store_latest_im(self, data):
@@ -198,7 +192,9 @@ class RobotRecorder(object):
         cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")  #(1920, 1080)
 
         self.ltob.img_cv2 = self.crop_highres(cv_image)
-        self.ltob.img_cropped = self.crop_lowres(cv_image)
+        # self.ltob.img_cropped = self.crop_lowres(cv_image)
+
+
 
     def crop_highres(self, cv_image):
         startcol = 180
@@ -321,19 +317,7 @@ class RobotRecorder(object):
         if self.save_actions:
             self._save_state_actions(i_save, action, endeffector_pose)
 
-        if self.save_gif:
-            highres = cv2.cvtColor(self.ltob.img_cv2, cv2.COLOR_BGR2RGB)
-            print 'highres dim',highres.shape
-            self.highres_imglist.append(highres)
 
-    def save_highres(self):
-        # clip = mpy.ImageSequenceClip(self.highres_imglist, fps=10)
-        # clip.write_gif(self.image_folder + '/highres_traj{}.mp4'.format(self.itr))
-        writer = imageio.get_writer(self.image_folder + '/highres_traj{}.mp4'.format(self.itr), fps=10)
-        print 'shape highes:', self.highres_imglist[0].shape
-        for im in self.highres_imglist:
-            writer.append_data(im)
-        writer.close()
 
     def get_aux_img(self):
         try:

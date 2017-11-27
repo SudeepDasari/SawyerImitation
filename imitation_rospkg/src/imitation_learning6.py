@@ -8,7 +8,8 @@ import os
 
 class ImitationLearningModel:
     def __init__(self, vgg19_path, images=None, robot_configs=None, actions=None):
-        self.images = tf.image.convert_image_dtype(tf.nn.local_response_normalization(tf.image.convert_image_dtype(images, tf.float32)), dtype = tf.uint8, saturate=True)
+        # self.images = tf.image.convert_image_dtype(tf.nn.local_response_normalization(tf.image.convert_image_dtype(images, tf.float32)), dtype = tf.uint8, saturate=True)
+        self.images = images
         self.robot_configs = robot_configs
         self.actions = actions
 
