@@ -16,48 +16,40 @@ from recorder.robot_recorder import RobotRecorder
 from setup_predictor import setup_MAML_predictor_human as setup_predictor
 import cv2
 import os
-from ee_velocity_compute import EE_Calculator
+
 
 import inverse_kinematics
-from sensor_msgs.msg import JointState
-from std_msgs.msg import Float32
-from std_msgs.msg import Int64
+
+
 
 class Traj_aborted_except(Exception):
     pass
 
 class SawyerOneShot(object):
-    EE_STEPS = 1
-    ACTION_SEQUENCE_LENGTH = 5
+    EE_STEPS = 2
+    ACTION_SEQUENCE_LENGTH = 3
     SPRING_STIFF = 220
+    CONTROL_RATE = 20
 
+    CROP_H_MIN = 0
+    CROP_H_MAX = -150
+    CROP_W_MIN = 190
+    CROP_W_MAX = -235
     def __init__(self, meta_path, norm_path, recording_path):
-        self.ctrl = RobotController()
+        self.ctrl = RobotController(self.CONTROL_RATE)
 
         self.recorder = RobotRecorder(save_dir='',
                                       use_aux=False,
                                       save_actions=False,
                                       save_images=False)
 
-        self.action_interval = 20 #Hz
-        self.action_sequence_length = 20
-
-        self.imp_ctrl_publisher = rospy.Publisher('desired_joint_pos', JointState, queue_size=1)
-        self.imp_ctrl_release_spring_pub = rospy.Publisher('release_spring', Float32, queue_size=10)
-        self.imp_ctrl_active = rospy.Publisher('imp_ctrl_active', Int64, queue_size=10)
-
-        self.traj_duration = self.action_sequence_length * self.action_interval
-        self.action_rate = rospy.Rate(self.action_interval)
-        self.control_rate = rospy.Rate(20)
-        self.predictor = setup_predictor(meta_path, norm_path, recording_path)
-        self.save_ctr = 0
+        self.control_rate = rospy.Rate(self.CONTROL_RATE)
+        self.predictor = setup_predictor(meta_path, norm_path, recording_path, self.CROP_H_MIN, self.CROP_H_MAX, self.CROP_W_MIN, self.CROP_W_MAX)
 
         self.move_netural()
 
-        self.s = 0
-
     def query_action(self):
-        image = cv2.resize(self.recorder.ltob.img_cv2[:-150, 190:-235, :], (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1]
+        image = cv2.resize(self.recorder.ltob.img_cv2[self.CROP_H_MIN:self.CROP_H_MAX, self.CROP_W_MIN:self.CROP_W_MAX, :], (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1]
 
         robot_configs = self.recorder.get_endeffector_pos()
 
@@ -67,22 +59,8 @@ class SawyerOneShot(object):
         action, ee = self.predictor(image, robot_configs)
         self.img_stack.append(image)
 
-        print 'ee', ee
-
         return action, ee
-    def imp_ctrl_release_spring(self, maxstiff):
-        self.imp_ctrl_release_spring_pub.publish(maxstiff)
 
-    def apply_action(self, action):
-        try:
-            self.ctrl.set_joint_velocities(action)
-
-        except OSError:
-            rospy.logerr('collision detected, stopping trajectory, going to reset robot...')
-            rospy.sleep(.5)
-        if self.ctrl.limb.has_collided():
-            rospy.logerr('collision detected!!!')
-            rospy.sleep(.5)
     def move_to(self, des_pos):
         desired_pose = inverse_kinematics.get_pose_stamped(des_pos[0],
                                                            des_pos[1],
@@ -103,45 +81,17 @@ class SawyerOneShot(object):
 
 
 
-        self.imp_ctrl_release_spring(self.SPRING_STIFF)
-        self.move_with_impedance_sec(des_joint_angles)
+        self.ctrl.imp_ctrl_release_spring(self.SPRING_STIFF)
+        self.ctrl.move_with_impedance_sec(des_joint_angles)
         # self.ctrl.set_joint_positions(des_joint_angles)
 
-    def move_with_impedance_sec(self, cmd, duration=2.):
-        jointnames = self.ctrl.limb.joint_names()
-        prev_joint = np.array([self.ctrl.limb.joint_angle(j) for j in jointnames])
-        new_joint = np.array([cmd[j] for j in jointnames])
 
-        start_time = rospy.get_time()  # in seconds
-        finish_time = start_time + duration  # in seconds
-
-        while rospy.get_time() < finish_time:
-            int_joints = prev_joint + (rospy.get_time()-start_time)/(finish_time-start_time)*(new_joint-prev_joint)
-            # print int_joints
-            cmd = dict(zip(self.ctrl.limb.joint_names(), list(int_joints)))
-            self.move_with_impedance(cmd)
-            self.control_rate.sleep()
-
-    def move_with_impedance(self, des_joint_angles):
-        """
-        non-blocking
-        """
-        js = JointState()
-        js.name = self.ctrl.limb.joint_names()
-        js.position = [des_joint_angles[n] for n in js.name]
-        self.imp_ctrl_publisher.publish(js)
-
-    def set_neutral_with_impedance(self):
-        neutral_jointangles = [0.412271, -0.434908, -1.198768, 1.795462, 1.160788, 1.107675, 2.068076]
-        cmd = dict(zip(self.ctrl.limb.joint_names(), neutral_jointangles))
-        # self.imp_ctrl_release_spring(20)
-        self.move_with_impedance_sec(cmd)
 
 
     def move_netural(self):
         # self.ctrl.set_neutral()
-        self.imp_ctrl_release_spring(280)
-        self.set_neutral_with_impedance()
+        self.ctrl.imp_ctrl_release_spring(280)
+        self.ctrl.set_neutral_with_impedance()
 
     def run_trajectory(self):
         self.start = self.recorder.get_endeffector_pos()

@@ -133,12 +133,12 @@ def load_video_ref_human(imagea, imageb, stateb, scale, bias, T=40):
    return imagea, imageb, stateb
 
 
-def setup_MAML_predictor(meta_path, norm_path, recording_path):
+def setup_MAML_predictor(meta_path, norm_path, recording_path, crop_h_min = 0, crop_h_max = -150, crop_w_min = 190, crop_w_max = -235):
     print 'loading images'
     imgs = glob.glob(recording_path + '/images/*.jpg')
     imgs.sort(key=lambda x: int(x.split('_im')[1][:2]))
 
-    image_a = np.stack([cv2.resize(cv2.imread(i)[:-150, 150:-275, :], (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1] for i in
+    image_a = np.stack([cv2.resize(cv2.imread(i)[crop_h_min:crop_h_max, crop_w_min:crop_w_max, :], (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1] for i in
             imgs], axis = 0)
     for i in image_a:
         cv2.imshow('img', i[:, :, ::-1])
@@ -228,7 +228,7 @@ def setup_MAML_predictor(meta_path, norm_path, recording_path):
 
     return predictor_func
 
-def setup_MAML_predictor_human(meta_path, norm_path, recording_path):
+def setup_MAML_predictor_human(meta_path, norm_path, recording_path, crop_h_min = 0, crop_h_max = -150, crop_w_min = 190, crop_w_max = -235):
     meta_path = os.path.expanduser(meta_path)
     norm_path = os.path.expanduser(norm_path)
     recording_path = os.path.expanduser(recording_path)
@@ -238,7 +238,7 @@ def setup_MAML_predictor_human(meta_path, norm_path, recording_path):
     imgs.sort(key=lambda x: int(x.split('_im')[1][:2]))
 
     image_a = np.stack(
-        [cv2.resize(cv2.imread(i)[:-150, 190:-235, :], (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1] for i in
+        [cv2.resize(cv2.imread(i)[crop_h_min:crop_h_max, crop_w_min:crop_w_max, :], (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1] for i in
          imgs], axis=0)
     for i in image_a:
         cv2.imshow('img', i[:, :, ::-1])
