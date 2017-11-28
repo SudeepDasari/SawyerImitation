@@ -137,13 +137,14 @@ def setup_MAML_predictor(meta_path, norm_path, crop_h_min = 0, crop_h_max = -150
     meta_path = os.path.expanduser(meta_path)
     norm_path = os.path.expanduser(norm_path)
 
-
-    sess = tf.InteractiveSession()
-    print 'made sess'
-    saver = tf.train.import_meta_graph(meta_path)
-    print 'imported meta'
-    saver.restore(sess, meta_path[:-5])
-    print 'restored'
+    graph = tf.Graph()
+    sess = tf.InteractiveSession(graph=graph)
+    with graph.as_default():
+        print 'made sess'
+        saver = tf.train.import_meta_graph(meta_path)
+        print 'imported meta'
+        saver.restore(sess, meta_path[:-5])
+        print 'restored'
 
     #video demo recorded
     obsa = tf.get_default_graph().get_tensor_by_name('obsa:0')
@@ -181,23 +182,10 @@ def setup_MAML_predictor(meta_path, norm_path, crop_h_min = 0, crop_h_max = -150
 
     return predictor_func
 
-def setup_MAML_predictor_human(meta_path, norm_path, recording_path, crop_h_min = 0, crop_h_max = -150, crop_w_min = 190, crop_w_max = -235):
+def setup_MAML_predictor_human(meta_path, norm_path, crop_h_min = 0, crop_h_max = -150, crop_w_min = 190, crop_w_max = -235):
     meta_path = os.path.expanduser(meta_path)
     norm_path = os.path.expanduser(norm_path)
-    recording_path = os.path.expanduser(recording_path)
 
-    print 'loading images'
-    imgs = glob.glob(recording_path + '/images/*.jpg')
-    imgs.sort(key=lambda x: int(x.split('_im')[1][:2]))
-
-    image_a = np.stack(
-        [cv2.resize(cv2.imread(i)[crop_h_min:crop_h_max, crop_w_min:crop_w_max, :], (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1] for i in
-         imgs], axis=0)
-    for i in image_a:
-        cv2.imshow('img', i[:, :, ::-1])
-        cv2.waitKey(100)
-    cv2.destroyAllWindows()
-    print 'loaded images', image_a.shape
 
     with open(norm_path, 'rb') as f:
         res = pickle.load(f)
@@ -205,13 +193,14 @@ def setup_MAML_predictor_human(meta_path, norm_path, recording_path, crop_h_min 
         bias = res['bias']
         print 'from', norm_path, 'loaded scale', scale.shape, 'bias', bias.shape
 
-
-    sess = tf.InteractiveSession()
-    print 'made sess'
-    saver = tf.train.import_meta_graph(meta_path)
-    print 'imported meta'
-    saver.restore(sess, meta_path[:-5])
-    print 'restored'
+    graph = tf.Graph()
+    sess = tf.InteractiveSession(graph=graph)
+    with graph.as_default():
+        print 'made sess'
+        saver = tf.train.import_meta_graph(meta_path)
+        print 'imported meta'
+        saver.restore(sess, meta_path[:-5])
+        print 'restored'
 
     #video demo recorded
     obsa = tf.get_default_graph().get_tensor_by_name('obsa:0')
@@ -224,7 +213,7 @@ def setup_MAML_predictor_human(meta_path, norm_path, recording_path, crop_h_min 
     output_f_ee = tf.get_default_graph().get_tensor_by_name('final_ee:0')
     print 'got tensors'
 
-    def predictor_func(imageb, robot_state):
+    def predictor_func(image_a, record_state, record_action, imageb, robot_state):
         #imagea, imageb, stateb
             img_a, img_b, state_b = load_video_ref_human(image_a, imageb, robot_state, scale, bias)
             #1x40x(100*100*3)

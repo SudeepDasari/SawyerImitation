@@ -14,13 +14,14 @@ import moviepy.editor as mpy
 from robot_controller import RobotController
 from recorder.robot_recorder import RobotRecorder
 from setup_predictor import setup_MAML_predictor as setup_predictor
+from setup_predictor import setup_MAML_predictor_human as setup_predictor_human
 import cv2
 import os
 from keyboard.msg._Key import Key
 from ee_velocity_compute import EE_Calculator
 
 import inverse_kinematics
-
+from sensor_msgs.msg import Image as Image_msg
 
 
 class Traj_aborted_except(Exception):
@@ -39,34 +40,98 @@ class SawyerOneShot(object):
     CROP_W_MAX = -235
     TRAJ_LEN = 40
 
+    HUMAN_MODEL = 'to_test/model_human_maml/place_sawyer_maml_3_layers_200_dim_1d_conv_ee_3_32_act_2_32_20x1_filters_64_128_3x3_filters_human_light_68k.meta'
+    HUMAN_BIAS = 'to_test/model_human_maml/scale_and_bias_place_sawyer_kinect_view_human.pkl'
+
+    ROBOT_MODEL = 'to_test/model_maml_kinect2_2/place_sawyer_maml_3_layers_200_dim_ee_2_layers_100_dim_clip_20_kinect_view_47k.meta'
+    ROBOT_BIAS = 'to_test/model_maml_kinect2_2/scale_and_bias_place_sawyer_kinect_view_both.pkl'
     Z_SAFETY_THRESH = 0.20
-    def __init__(self, meta_path, norm_path):
+    def __init__(self):
 
         self.ctrl = RobotController(self.CONTROL_RATE)
         self.recorder = RobotRecorder(save_dir='',
                                       use_aux=False,
                                       save_actions=False,
                                       save_images=False)
+        self.image_publisher = rospy.Publisher('/robot/head_display', Image_msg, queue_size=2)
+        self.load_splashes()
 
         self.control_rate = rospy.Rate(self.PREDICT_RATE)
-        self.predictor = setup_predictor(meta_path, norm_path, self.CROP_H_MIN, self.CROP_H_MAX, self.CROP_W_MIN, self.CROP_W_MAX)
 
+        self.robot_predictor = setup_predictor(self.ROBOT_MODEL, self.ROBOT_BIAS, self.CROP_H_MIN, self.CROP_H_MAX, self.CROP_W_MIN, self.CROP_W_MAX)
+        self.human_predictor = setup_predictor_human(self.HUMAN_MODEL, self.HUMAN_BIAS, self.CROP_H_MIN, self.CROP_H_MAX, self.CROP_W_MIN,
+                                               self.CROP_W_MAX)
+        self.is_human = False
+
+        self.predictor = self.robot_predictor
         self.move_netural()
         rospy.Subscriber("/keyboard/keyup", Key, self.keyboard_up_listener)
 
         self._navigator = intera_interface.Navigator()
         self.demo_collect = self._navigator.register_callback(self.record_demo, 'right_button_ok')
+        self.swap_key = self._navigator.register_callback(self.swap_sawyer_cuff, 'right_button_back')
+        self.start_key = self._navigator.register_callback(self.start_traj_cuff, 'right_button_square')
+        self.neutral_key = self._navigator.register_callback(self.neutral_cuff, 'right_button_show')
+
         self.calc = EE_Calculator()
 
         print 'ONE SHOT READY!'
         self.running = False
         self.demo_imgs = None
+
         rospy.spin()
 
+    def publish_to_head(self, img):
+        num_rows, num_cols = img.shape[:2]
+        rotation_matrix = np.array([[0., 1., 0.,], [-1., 0., 1024.,]])
+        img = cv2.warpAffine(img, rotation_matrix, (num_rows, num_cols))[:, ::-1, :]
+
+
+        img = np.swapaxes(img, 0, 1)[::-1, ::-1, :]
+
+        img_message = self.recorder.bridge.cv2_to_imgmsg(img)
+        self.image_publisher.publish(img_message)
+
+    def neutral_cuff(self, value):
+        if self.running or not value:
+          return
+        self.move_netural()
+
+    def load_splashes(self):
+        self.human_splash = cv2.imread('splashes/human_imitation_start.png')
+        self.robot_splash = cv2.imread('splashes/robot_imitation_start.png')
+        self.demo_splash = cv2.imread('splashes/recording_oneshot.png')
+
+        self.publish_to_head(self.robot_splash)
+
+    def swap_model(self):
+        if self.is_human:
+            self.publish_to_head(self.robot_splash)
+            self.predictor = self.robot_predictor
+            self.is_human = False
+        else:
+            self.predictor = self.human_predictor
+            self.is_human = True
+            self.publish_to_head(self.human_splash)
+        self.demo_imgs = None
+
+    def swap_sawyer_cuff(self, value):
+        if not value or self.running:
+            return
+        self.swap_model()
+
+    def start_traj_cuff(self, value):
+        if not value or self.running:
+            return
+        if self.demo_imgs is None:
+            print "PLEASE COLLECT DEMOS FIRST"
+            return
+        self.run_trajectory()
 
     def record_demo(self, value):
-        if self.running:
+        if not value or self.running:
             return
+        print "beginning demo!"
         self.running = True
         self.demo_imgs = []
 
@@ -75,6 +140,8 @@ class SawyerOneShot(object):
         self.control_rate.sleep()
 
         for i in range(self.TRAJ_LEN):
+            self.publish_to_head(self.demo_splash)
+
             self.control_rate.sleep()
             self.demo_imgs.append(self.recorder.ltob.img_cv2)
             traj_ee_pos[i, :] = self.recorder.get_endeffector_pos()
@@ -95,7 +162,12 @@ class SawyerOneShot(object):
             cv2.waitKey(100)
         cv2.destroyAllWindows()
         self.running = False
+        print "DEMO DONE"
 
+        if self.is_human:
+            self.publish_to_head(self.human_splash)
+        else:
+            self.publish_to_head(self.robot_splash)
 
 
     def keyboard_up_listener(self, key_msg):
@@ -109,6 +181,8 @@ class SawyerOneShot(object):
             rospy.signal_shutdown('User shutdown!')
         if key_msg.code == 110 and not self.running:
             self.move_netural()
+        if key_msg.code == 115 and not self.running:
+            self.swap_model()
 
     def query_action(self):
         image = cv2.resize(self.recorder.ltob.img_cv2[self.CROP_H_MIN:self.CROP_H_MAX, self.CROP_W_MIN:self.CROP_W_MAX, :], (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1]
@@ -208,4 +282,4 @@ if __name__ == '__main__':
     # flags.DEFINE_string('vgg19_path', './', 'path to npy file')
     # model_human = 'to_test/model_human_maml/place_sawyer_maml_3_layers_200_dim_1d_conv_ee_3_32_act_2_32_20x1_filters_64_128_3x3_filters_human_light_68k.meta'
     # bias_human = 'to_test/model_human_maml/scale_and_bias_place_sawyer_kinect_view_human.pkl'
-    d = SawyerOneShot('to_test/model_maml_kinect2_2/place_sawyer_maml_3_layers_200_dim_ee_2_layers_100_dim_clip_20_kinect_view_47k.meta','to_test/model_maml_kinect2_2/scale_and_bias_place_sawyer_kinect_view_both.pkl')
+    d = SawyerOneShot()
