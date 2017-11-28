@@ -360,6 +360,8 @@ class DemoRobotRecorder(object):
             rospy.logerr("Service call failed: %s" % (e,))
             raise ValueError('get_kinectdata service failed')
 
+
+
     def _save_state_actions(self, i_save, endeff_pose):
         joints_right = self._limb_right.joint_names()
         with open(self.state_action_data_file, 'a') as f:

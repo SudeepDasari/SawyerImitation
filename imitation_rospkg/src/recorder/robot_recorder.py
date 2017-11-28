@@ -87,7 +87,7 @@ class RobotRecorder(object):
         prefix = self.instance_type
 
         rospy.Subscriber(prefix + "/kinect2/hd/image_color", Image_msg, self.store_latest_im)
-        rospy.Subscriber(prefix + "/kinect2/sd/image_depth_rect", Image_msg, self.store_latest_d_im)
+        # rospy.Subscriber(prefix + "/kinect2/sd/image_depth_rect", Image_msg, self.store_latest_d_im)
 
         self.name_of_service = "ExternalTools/right/PositionKinematicsNode/FKService"
         self.fksvc = rospy.ServiceProxy(self.name_of_service, SolvePositionFK)
@@ -190,7 +190,6 @@ class RobotRecorder(object):
         self.ltob.img_msg = data
         self.ltob.tstamp_img = rospy.get_time()
         cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")  #(1920, 1080)
-        print 'orig_size',cv_image.shape
 
         self.ltob.img_cv2 = self.crop_highres(cv_image)
         # self.ltob.img_cropped = self.crop_lowres(cv_image)
@@ -433,7 +432,9 @@ class RobotRecorder(object):
         return pos
 
     def get_joint_angles(self):
-        return [self._limb_right.joint_angle(j) for j in self._limb_right.joint_names()]
+        return np.array([self._limb_right.joint_angle(j) for j in self._limb_right.joint_names()]).reshape((1, -1))
+    def get_joint_angles_velocity(self):
+        return np.array([self._limb_right.joint_velocity(j) for j in self._limb_right.joint_names()]).reshape((1, -1))
 
 if __name__ ==  '__main__':
     print 'started'

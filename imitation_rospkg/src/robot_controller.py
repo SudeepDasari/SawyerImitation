@@ -58,7 +58,7 @@ class RobotController(object):
     def set_joint_velocities(self, velocities):
         self.limb.set_joint_velocities(velocities)
 
-    def set_neutral(self, speed=.2):
+    def set_neutral(self, speed=.15):
         # using a custom handpicked neutral position
         # starting from j0 to j6:
         neutral_jointangles = [0.412271, -0.434908, -1.198768, 1.795462, 1.160788, 1.107675, 2.068076]
@@ -90,6 +90,21 @@ class RobotController(object):
             # print int_joints
             cmd = dict(zip(self.limb.joint_names(), list(int_joints)))
             self.move_with_impedance(cmd)
+            self.control_rate.sleep()
+
+    def set_joint_positions_interp(self, cmd, duration=0.3):
+        jointnames = self.limb.joint_names()
+        prev_joint = np.array([self.limb.joint_angle(j) for j in jointnames])
+        new_joint = np.array([cmd[j] for j in jointnames])
+
+        start_time = rospy.get_time()  # in seconds
+        finish_time = start_time + duration  # in seconds
+
+        while rospy.get_time() < finish_time:
+            int_joints = prev_joint + (rospy.get_time()-start_time)/(finish_time-start_time)*(new_joint-prev_joint)
+            # print int_joints
+            cmd = dict(zip(self.limb.joint_names(), list(int_joints)))
+            self.set_joint_positions(cmd)
             self.control_rate.sleep()
 
     def move_with_impedance(self, des_joint_angles):
