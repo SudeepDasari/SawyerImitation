@@ -89,8 +89,11 @@ class SawyerOneShot(object):
 
         img = np.swapaxes(img, 0, 1)[::-1, ::-1, :]
 
+        #I don't know why the transforms above work either
+
         img_message = self.recorder.bridge.cv2_to_imgmsg(img)
         self.image_publisher.publish(img_message)
+
 
     def neutral_cuff(self, value):
         if self.running or not value:
@@ -137,10 +140,16 @@ class SawyerOneShot(object):
 
         traj_ee_pos = np.zeros((self.TRAJ_LEN, 7))
         traj_ee_velocity = np.zeros((self.TRAJ_LEN, 6))
+        full_duration = float(self.TRAJ_LEN) / self.PREDICT_RATE
+
+
         self.control_rate.sleep()
 
         for i in range(self.TRAJ_LEN):
-            self.publish_to_head(self.demo_splash)
+            splash = np.copy(self.demo_splash)
+            cv2.putText(splash, "{:.2f}s".format(full_duration - i * 1. / self.PREDICT_RATE), (250, 460), cv2.FONT_HERSHEY_SIMPLEX, 6, (255, 255, 255), 20,
+                        cv2.LINE_AA)
+            self.publish_to_head(splash)
 
             self.control_rate.sleep()
             self.demo_imgs.append(self.recorder.ltob.img_cv2)
@@ -151,6 +160,12 @@ class SawyerOneShot(object):
 
             traj_ee_velocity[i, :] = self.calc.jacobian(angles.reshape(-1)).dot(velocities.reshape((-1, 1))).reshape(-1)
 
+        splash = np.copy(self.demo_splash)
+        cv2.putText(splash, "{:.2f}s".format(0.00), (250, 460),
+                    cv2.FONT_HERSHEY_SIMPLEX, 6, (255, 255, 255), 20,
+                    cv2.LINE_AA)
+        self.publish_to_head(splash)
+
         final_ee = np.tile(traj_ee_pos[-1, :2], (40, 1))
         self.record_state = traj_ee_pos
         self.record_action = np.concatenate((traj_ee_velocity[:, :3], final_ee), axis=1)
@@ -158,9 +173,14 @@ class SawyerOneShot(object):
         self.demo_imgs = np.stack([cv2.resize(img[self.CROP_H_MIN:self.CROP_H_MAX, self.CROP_W_MIN:self.CROP_W_MAX, :],
                                      (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1] for img in self.demo_imgs], axis = 0)
         for i in self.demo_imgs:
+            splash = np.copy(self.demo_splash)
+            splash[327:427, 466:566, :] = i[:, :, ::-1]
+            self.publish_to_head(splash)
+
             cv2.imshow('img', i[:, :, ::-1])
-            cv2.waitKey(100)
+            cv2.waitKey(200)
         cv2.destroyAllWindows()
+
         self.running = False
         print "DEMO DONE"
 
