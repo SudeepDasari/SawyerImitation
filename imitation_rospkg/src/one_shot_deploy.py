@@ -49,6 +49,7 @@ class SawyerOneShot(object):
     def __init__(self):
 
         self.ctrl = RobotController(self.CONTROL_RATE)
+        self.ctrl.set_weiss_griper(50)
         self.recorder = RobotRecorder(save_dir='',
                                       use_aux=False,
                                       save_actions=False,
