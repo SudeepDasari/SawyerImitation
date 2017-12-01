@@ -26,6 +26,7 @@ from sensor_msgs.msg import Image as Image_msg
 
 class Traj_aborted_except(Exception):
     pass
+from wsg_50_common.msg import Cmd, Status
 
 class SawyerOneShot(object):
     EE_STEPS = 2
@@ -33,6 +34,7 @@ class SawyerOneShot(object):
     SPRING_STIFF = 240
     CONTROL_RATE = 10000
     PREDICT_RATE = 20
+    UI_RATE = 1
 
     CROP_H_MIN = 0
     CROP_H_MAX = -150
@@ -49,7 +51,9 @@ class SawyerOneShot(object):
     def __init__(self):
 
         self.ctrl = RobotController(self.CONTROL_RATE)
-        self.ctrl.set_weiss_griper(50)
+
+
+
         self.recorder = RobotRecorder(save_dir='',
                                       use_aux=False,
                                       save_actions=False,
@@ -58,6 +62,7 @@ class SawyerOneShot(object):
         self.load_splashes()
 
         self.control_rate = rospy.Rate(self.PREDICT_RATE)
+        self.ui_rate = rospy.Rate(self.UI_RATE)
 
         self.robot_predictor = setup_predictor(self.ROBOT_MODEL, self.ROBOT_BIAS, self.CROP_H_MIN, self.CROP_H_MAX, self.CROP_W_MIN, self.CROP_W_MAX)
         self.human_predictor = setup_predictor_human(self.HUMAN_MODEL, self.HUMAN_BIAS, self.CROP_H_MIN, self.CROP_H_MAX, self.CROP_W_MIN,
@@ -65,20 +70,27 @@ class SawyerOneShot(object):
         self.is_human = False
 
         self.predictor = self.robot_predictor
-        self.move_netural()
+
         rospy.Subscriber("/keyboard/keyup", Key, self.keyboard_up_listener)
+        self.weiss_pub = rospy.Publisher('/wsg_50_driver/goal_position', Cmd, queue_size=10)
+        # rospy.Subscriber("/wsg_50_driver/status", Status, self.weiss_status_listener)
 
         self._navigator = intera_interface.Navigator()
         self.demo_collect = self._navigator.register_callback(self.record_demo, 'right_button_ok')
         self.swap_key = self._navigator.register_callback(self.swap_sawyer_cuff, 'right_button_back')
         self.start_key = self._navigator.register_callback(self.start_traj_cuff, 'right_button_square')
         self.neutral_key = self._navigator.register_callback(self.neutral_cuff, 'right_button_show')
+        self.x_button = self._navigator.register_callback(self.gripper_cuff, 'right_button_triangle')
 
         self.calc = EE_Calculator()
+
+
 
         print 'ONE SHOT READY!'
         self.running = False
         self.demo_imgs = None
+
+        self.move_netural()
 
         rospy.spin()
 
@@ -95,6 +107,11 @@ class SawyerOneShot(object):
         img_message = self.recorder.bridge.cv2_to_imgmsg(img)
         self.image_publisher.publish(img_message)
 
+    def gripper_cuff(self, value):
+        if self.running or not value:
+            return
+        print value
+        self.set_weiss_griper(10.)
 
     def neutral_cuff(self, value):
         if self.running or not value:
@@ -105,6 +122,7 @@ class SawyerOneShot(object):
         self.human_splash = cv2.imread('splashes/human_imitation_start.png')
         self.robot_splash = cv2.imread('splashes/robot_imitation_start.png')
         self.demo_splash = cv2.imread('splashes/recording_oneshot.png')
+        #make review splash
 
         self.publish_to_head(self.robot_splash)
 
@@ -143,8 +161,22 @@ class SawyerOneShot(object):
         traj_ee_velocity = np.zeros((self.TRAJ_LEN, 6))
         full_duration = float(self.TRAJ_LEN) / self.PREDICT_RATE
 
+        for i in range(4, 0, -1):
+            splash = np.copy(self.demo_splash)
+            if i > 1:
+                cv2.putText(splash, "{}...".format(i - 1), (325, 460),
+                            cv2.FONT_HERSHEY_SIMPLEX, 6, (255, 255, 255), 20,
+                            cv2.LINE_AA)
+                self.publish_to_head(splash)
+                self.ui_rate.sleep()
+            else:
+                cv2.putText(splash, "GO!", (250, 460),
+                            cv2.FONT_HERSHEY_SIMPLEX, 6, (255, 255, 255), 20,
+                            cv2.LINE_AA)
+                self.publish_to_head(splash)
+                for i in range(5):
+                    self.control_rate.sleep()
 
-        self.control_rate.sleep()
 
         for i in range(self.TRAJ_LEN):
             splash = np.copy(self.demo_splash)
@@ -175,7 +207,8 @@ class SawyerOneShot(object):
                                      (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1] for img in self.demo_imgs], axis = 0)
         for i in self.demo_imgs:
             splash = np.copy(self.demo_splash)
-            splash[327:427, 466:566, :] = i[:, :, ::-1]
+            resized_i = cv2.resize(i,(400, 400), interpolation = cv2.INTER_CUBIC)
+            splash[190:590, 316:716, :] = resized_i[:, :, ::-1]
             self.publish_to_head(splash)
 
             cv2.imshow('img', i[:, :, ::-1])
@@ -192,18 +225,21 @@ class SawyerOneShot(object):
 
 
     def keyboard_up_listener(self, key_msg):
-        if key_msg.code == 99 and not self.running:
+        if key_msg.code == 99 and not self.running: #c
             if self.demo_imgs is None:
                 print "PLEASE COLLECT A DEMO FIRST"
                 return
 
             self.run_trajectory()
-        if key_msg.code == 101 and not self.running:
+
+        if key_msg.code == 101 and not self.running: #e
             rospy.signal_shutdown('User shutdown!')
-        if key_msg.code == 110 and not self.running:
+        if key_msg.code == 110 and not self.running: #n
             self.move_netural()
-        if key_msg.code == 115 and not self.running:
+        if key_msg.code == 115 and not self.running: #s
             self.swap_model()
+        if key_msg.code == 103 and not self.running: #g
+            self.set_weiss_griper(10.)
 
     def query_action(self):
         image = cv2.resize(self.recorder.ltob.img_cv2[self.CROP_H_MIN:self.CROP_H_MAX, self.CROP_W_MIN:self.CROP_W_MAX, :], (100, 100), interpolation=cv2.INTER_AREA)[:, :, ::-1]
@@ -233,31 +269,29 @@ class SawyerOneShot(object):
                          'going to reset robot...')
             current_joints = self.ctrl.limb.joint_angles()
             des_joint_angles = current_joints
-            # raise Traj_aborted_except('raising Traj_aborted_except')
 
-
-
-        # self.ctrl.imp_ctrl_release_spring(self.SPRING_STIFF)
-        # self.ctrl.move_with_impedance_sec(des_joint_angles)
-        # self.ctrl.set_joint_positions(des_joint_angles)
         if interp:
             self.ctrl.set_joint_positions_interp(des_joint_angles)
         else:
             self.ctrl.limb.set_joint_position_speed(0.15)
             self.ctrl.set_joint_positions(des_joint_angles)
 
+    def set_weiss_griper(self, width):
+        cmd = Cmd()
+        cmd.pos = width
+        cmd.speed = 100.
+        self.weiss_pub.publish(cmd)
 
-
-    def move_netural(self):
+    def move_netural(self, gripper_open = True):
         self.ctrl.set_neutral()
-        # self.ctrl.imp_ctrl_release_spring(280)
-        # self.ctrl.set_neutral_with_impedance()
+        if gripper_open:
+            self.set_weiss_griper(100.)
 
     def run_trajectory(self):
         self.running = True
         self.start = self.recorder.get_endeffector_pos()
         print 'actual end eep', self.start
-        self.move_netural()
+        self.move_netural(gripper_open=False)
         self.img_stack = []
 
         step = 0
@@ -289,7 +323,7 @@ class SawyerOneShot(object):
             self.move_to(current_eep[:3])
 
             step += 1
-
+        self.set_weiss_griper(100.)
         print 'end', self.recorder.get_endeffector_pos()
         clip = mpy.ImageSequenceClip([i for i in self.img_stack], fps=20)
         clip.write_gif('test_frames.gif')
@@ -298,9 +332,4 @@ class SawyerOneShot(object):
 
 
 if __name__ == '__main__':
-    # FLAGS = flags.FLAGS
-    # flags.DEFINE_string('model_path', './', 'path to output model/stats')
-    # flags.DEFINE_string('vgg19_path', './', 'path to npy file')
-    # model_human = 'to_test/model_human_maml/place_sawyer_maml_3_layers_200_dim_1d_conv_ee_3_32_act_2_32_20x1_filters_64_128_3x3_filters_human_light_68k.meta'
-    # bias_human = 'to_test/model_human_maml/scale_and_bias_place_sawyer_kinect_view_human.pkl'
     d = SawyerOneShot()

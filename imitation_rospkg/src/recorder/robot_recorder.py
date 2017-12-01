@@ -85,8 +85,7 @@ class RobotRecorder(object):
         print 'init recorder with instance type', self.instance_type
 
         prefix = self.instance_type
-
-        rospy.Subscriber(prefix + "/kinect2/hd/image_color", Image_msg, self.store_latest_im)
+        rospy.Subscriber("/kinect2/hd/image_color", Image_msg, self.store_latest_im)
         # rospy.Subscriber(prefix + "/kinect2/sd/image_depth_rect", Image_msg, self.store_latest_d_im)
 
         self.name_of_service = "ExternalTools/right/PositionKinematicsNode/FKService"

@@ -14,7 +14,7 @@ import pdb
 from std_msgs.msg import Float32
 from std_msgs.msg import Int64
 from sensor_msgs.msg import JointState
-from wsg_50_common.msg import Cmd, Status
+
 
 class RobotController(object):
 
@@ -40,15 +40,7 @@ class RobotController(object):
         self.imp_ctrl_active = rospy.Publisher('imp_ctrl_active', Int64, queue_size=10)
 
         self.control_rate = rospy.Rate(CONTROL_RATE)
-        self.weiss_pub = rospy.Publisher('/wsg_50_driver/goal_position', Cmd, queue_size=10)
-        # rospy.Subscriber("/wsg_50_driver/status", Status, self.weiss_status_listener)
 
-
-    def set_weiss_griper(self, width):
-        cmd = Cmd()
-        cmd.pos = width
-        cmd.speed = 100.
-        self.weiss_pub.publish(cmd)
 
 
     def set_joint_delta(self, joint_name, delta):
