@@ -260,14 +260,12 @@ class SawyerOneShot(object):
                                                            inverse_kinematics.EXAMPLE_O)
         start_joints = self.ctrl.limb.joint_angles()
         try:
-            print 'start ik'
             des_joint_angles = inverse_kinematics.get_joint_angles(desired_pose, seed_cmd=start_joints,
                                                                    use_advanced_options=True)
-            print 'after ik'
         except ValueError:
             rospy.logerr('no inverse kinematics solution found, '
                          'going to reset robot...')
-            current_joints = self.ctrl.limb.joint_angles()
+            current_joints = self.recorder.get_joint_angles()
             des_joint_angles = current_joints
 
         if interp:
@@ -306,16 +304,11 @@ class SawyerOneShot(object):
             self.move_to(current_eep[:3], i > 0)
 
         while step < self.ACTION_SEQUENCE_LENGTH:
-            self.control_rate.sleep()
             current_eep = self.recorder.get_endeffector_pos()
-            print 'step', step
+
 
             eep_diff_action, pred_final = self.query_action()
-            # print 'ee_diff_action', eep_diff_action
-
-            # print 'before', current_eep[:3]
             current_eep[:3] += 0.05 * eep_diff_action
-            #add some fuzz to z when far away to fix joint impedence. pretty hacky for now
 
             current_eep[2] = max(current_eep[2], self.Z_SAFETY_THRESH)
 
