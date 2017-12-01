@@ -164,13 +164,13 @@ class SawyerOneShot(object):
         for i in range(4, 0, -1):
             splash = np.copy(self.demo_splash)
             if i > 1:
-                cv2.putText(splash, "{}...".format(i - 1), (325, 460),
+                cv2.putText(splash, "{}...".format(i - 1), (375, 460),
                             cv2.FONT_HERSHEY_SIMPLEX, 6, (255, 255, 255), 20,
                             cv2.LINE_AA)
                 self.publish_to_head(splash)
                 self.ui_rate.sleep()
             else:
-                cv2.putText(splash, "GO!", (250, 460),
+                cv2.putText(splash, "GO!", (375, 460),
                             cv2.FONT_HERSHEY_SIMPLEX, 6, (255, 255, 255), 20,
                             cv2.LINE_AA)
                 self.publish_to_head(splash)
