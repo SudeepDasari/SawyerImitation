@@ -1,0 +1,128 @@
+body#rail-body{
+    color: #606060;
+}
+
+img.center {
+    display: block;
+    margin: 0 auto;
+}
+
+.font-courier{
+    font-family: Courier;
+}
+
+.ul-no-bullet {
+    list-style-type: none;
+}
+
+.ul-horizontal {
+    list-style-type: none;
+    overflow: hidden;
+    padding: 0;
+}
+.ul-horizontal li{
+    display: inline;
+}
+
+#rail-logo{
+    font-weight: bold;
+    font-size: xx-large;
+    font-family: Courier;
+    color: #808080;
+}
+
+#rail-logo-ai{
+    color: #6495ed;
+}
+
+.rail-logo-text{
+    font-weight: bold;
+    font-size: medium;
+    font-family: "Courier New";
+    color: #606060;
+}
+
+ul#rail-menu {
+    padding: 4px;
+}
+
+ul#rail-menu li {
+    display:inline;
+    font-family: Arial;
+    font-weight: bold;
+    color: #606060;
+    padding-right: 4px;
+    padding-left: 4px;
+    /* border-right: medium solid #606060; */
+}
+
+ul#rail-menu li a:hover {
+    color:blue;
+}
+
+ul#rail-menu li a{
+    font-family: Arial;
+    font-weight: bold;
+    color: #606060;
+    /* border-right: medium solid #606060; */
+}
+
+ul#rail-menu li.rail-menu-selected a{
+    color:blue;
+}
+
+.pubs-title {
+    font-family: 'Lato', Verdana, Helvetica, sans-serif;
+    font-size: 14px;
+    font-weight: 700
+}
+
+.pubs-venue{
+    font-style: italic;
+    font-weight: bold;
+    font-size: small;
+    color: #0000aa;
+}
+
+.pubs-entry{
+    margin-top: 20px;
+}
+
+.pubs-description{
+    color: #444444;
+    font-size: 14px;
+}
+
+.pubs-author{
+    color: gray;
+}
+
+.slideshow{
+    width:759px;
+    height:506px;
+    background-color:white;
+    margin:auto;
+    background-image:url("images/stitch.jpg");
+    background-position:0;
+    background-repeat:no-repeat;
+    background-size:cover;
+    animation-name: slide;
+    animation-duration: 13s;
+    animation-direction: normal;
+    animation-timing-function: ease;
+    animation-iteration-count: infinite;
+}
+
+@keyframes slide {
+    0% {background-position:0 0;}
+    16.66% {background-position:0 0;}
+    33.32% {background-position:-759px 0;}
+    49.98% {background-position:-759px 0;}
+    66.64% {background-position:-1518px 0;}
+    83.30% {background-position:-1518px 0;}
+    100% {background-position:0 0;}
+}
+
+#copyright{
+    font-size: x-small;
+}
