@@ -3,7 +3,7 @@
 <head>
  <meta charset="UTF-8">
 <title>
-NIPS DEMO
+Deep Robotic Learning using Visual Imagination & Meta-Learning
 </title>
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
@@ -41,6 +41,39 @@ NIPS DEMO
 <div>
  <h2 align="middle" style="margin-top:50px"> Deep Robotic Learning using Visual Imagination & Meta-Learning</h2>
  <h5 align="middle"> Chelsea Finn, Frederik Ebert, Tianhe Yu, Annie Xie, Sudeep Dasari, Pieter Abbeel, Sergey Levine</h5>
+
+ <br>
+ <h6> <b> Abstract </b> </h6> 
+ <p> This demonstration showcased how deep learning can enable vision-based robotic manipulation. We set up a real robotic manipulation platform (using a Rethink Robotics Sawyer arm) at the 2017 Neural Information Processing Symposium in Long Beach, and demonstrated two different approaches to vision-based manipulation developed in our lab. The first approach will show a robot planning to achieve user-commanded goals using a learned video prediction model. The self-supervised video prediction model was proposed in Finn et al. ‘16 [1], and the visual model-based planning method was proposed by Finn & Levine ‘17 [2] and Ebert et al. ‘17 [3]. The second approach is a one-shot imitation learning algorithm. With this approach, the robot can learn to perform a task, such as reaching an object, from a single video of a human demonstrating the task. This work builds upon the meta-learning algorithm presented by Finn et al. ‘17 [5], applying it to imitation learning on a real robot using a novel algorithm change to enable learning from raw video. The paper underlying the approach was recently accepted to CORL [6]. Videos of the demonstration in action can be seen below, and additional videos visual prediction and one-shot imitation can be seen in [4] and [7] respectively. </p>
+<br>
+ <h6> <b> Demonstration Videos </b> </h6>
+ <div align="middle">
+ <iframe width="400" height="315" src="https://www.youtube.com/embed/VNALlESKiJ0" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+ <iframe width="400" height="315" src="https://www.youtube.com/embed/d1BYvN_yu3M" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+</div>
+ <br>
+<h6> <b> Media Coverage </b> </h6>
+<ul>
+  <li> <a href="https://blogs.nvidia.com/blog/2017/12/07/wheres-ai-going-next-ask-an-ai-nips/"> NVidia Blogpost</a> </li>
+  <li><a href="http://news.berkeley.edu/2017/12/04/robots-see-into-their-future/"> Berkeley Press Release </a> </li>
+  <li> <a href="https://techcrunch.com/2017/12/08/researchers-train-robots-to-see-into-the-future/"> Techcrunch Article</a> </li>
+</ul>
+<br>
+<h6> <b> Poster </b> <h6>
+  <div align="middle">
+    <embed src="nips_demo.pdf" width="800px" height="1050px" />
+  </div>
+ <br> 
+ <h6> <b> Citations </b> </h6>
+ <ol type="1">
+<li>Finn, C., Goodfellow, I. and Levine, S. Unsupervised Learning for Physical Interaction through Video Prediction. Neural Information Processing Systems (NIPS), 2016. </li>
+<li> Finn, C. and Levine, S. Deep Visual Foresight for Planning Robot Motion. International Conference on Robotics and Automation (ICRA), 2017. </li>
+<li> Ebert, F., Finn, C., Lee, A., and Levine, S. Occlusion-Aware Visual Foresight for Self-Supervised Robot Learning. Conference on Robot Learning (CORL), 2017. </li>
+<li> <a href = "https://sites.google.com/view/sna-visual-mpc">  Self-Supervised Visual Planning with Temporal Skip-Connections </a>  </li>
+<li> Finn, C., Abbeel, P., and Levine, S. Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks. International Conference on Machine Learning (ICML), 2017. </li>
+<li>Finn, C.*, Yu, T.*, Zhang, T., Abbeel, P., and Levine, S. One-Shot Visual Imitation Learning Via Meta-learning. Conference on Robot Learning (CORL), 2017. </li>
+<li> <a href="https://sites.google.com/view/one-shot-imitation "> One-Shot Visual Imitation Learning via Meta-Learning <a> </li>
+</ol>
 </div>
   <hr>
 
